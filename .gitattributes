@@ -1,0 +1,3 @@
+# Why: bash scripts break on CRLF; keep every gate file LF on every checkout (Windows included).
+* text eol=lf
+*.png binary
