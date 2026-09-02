@@ -1,0 +1,12 @@
+node_modules/
+.git/
+qa-report/
+dist/
+.next/
+coverage/
+build/
+vendor/
+__pycache__/
+*.min.js
+*.min.css
+tests/fixtures/

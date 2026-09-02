@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Installed by qa-gate init. Runs the fast gate (typecheck, lint, unit, secrets) before every commit.
+set -euo pipefail
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+exec bash "$REPO_ROOT/scripts/qa-gate.sh" pre-commit "$@"

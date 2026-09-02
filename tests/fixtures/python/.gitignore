@@ -1,0 +1,5 @@
+qa-report
+__pycache__
+.pytest_cache
+.coverage
+*.egg-info

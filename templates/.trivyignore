@@ -1,0 +1,10 @@
+node_modules/
+.git/
+qa-report/
+dist/
+.next/
+coverage/
+build/
+vendor/
+__pycache__/
+tests/fixtures/

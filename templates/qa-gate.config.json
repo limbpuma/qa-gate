@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "stack": "auto",
+  "git": { "base": "auto" },
+  "commands": {
+    "node": {
+      "typecheck": "auto",
+      "lint": "auto",
+      "unit": "auto",
+      "coverage": "auto",
+      "integration": "auto"
+    },
+    "go": {
+      "build": "go build ./... && go vet ./...",
+      "unit": "go test ./... -count=1 -coverprofile=qa-report/_logs/go-cover.out",
+      "vuln": "govulncheck ./..."
+    },
+    "python": {
+      "lint": "ruff check . && ruff format --check .",
+      "unit": "pytest -p pytest_cov --cov --cov-report=json:qa-report/_logs/coverage.json -q",
+      "env": { "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1" }
+    }
+  },
+  "coverage": {
+    "min": 80,
+    "ratchet": true,
+    "ratchetFile": "qa-report/coverage-ratchet.json",
+    "tolerance": 0.2
+  },
+  "secrets": {
+    "excludes": ["node_modules", ".git", "qa-report", "dist", ".next", "coverage"]
+  },
+  "semgrep": {
+    "image": "semgrep/semgrep:1.130.0",
+    "rulesets": ["p/secrets", "p/owasp-top-ten"],
+    "stackRulesets": {
+      "node": ["p/typescript", "p/javascript", "p/react", "p/nextjs", "p/nodejs"],
+      "go": ["p/golang", "p/gosec"],
+      "python": ["p/python", "p/bandit"]
+    },
+    "blockOn": "ERROR"
+  },
+  "trivy": {
+    "image": "aquasec/trivy:0.58.1",
+    "severity": "HIGH,CRITICAL",
+    "ignoreUnfixed": true,
+    "scanners": "vuln,misconfig,secret"
+  },
+  "audit": { "level": "high" },
+  "build": {
+    "dockerfile": "auto",
+    "context": ".",
+    "target": ""
+  },
+  "web": { "urls": [] },
+  "report": { "dir": "qa-report", "keepLogs": 10 }
+}
