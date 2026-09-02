@@ -17,8 +17,15 @@ bash ~/.claude/scripts/qa-gate/qa-gate.sh init          # add --web to seed web.
 bash scripts/qa-gate.sh pre-commit      # seconds, no Docker
 bash scripts/qa-gate.sh pr              # before merging a branch (Docker for Semgrep + Trivy)
 bash scripts/qa-gate.sh build           # image build + Trivy image + SBOM
+bash scripts/qa-gate.sh staging         # Pa11y + Lighthouse + e2e + Nuclei against web.baseUrl
+bash scripts/qa-gate.sh compliance      # axe EN 301 549 + legal scan + evidence bundle
 bash scripts/qa-gate.sh all             # pre-commit → pr → build → staging → compliance
 ```
+
+`staging` and `compliance` need `web.baseUrl` in the repo config; without it they print SKIP. When the app is
+not answering, the gate runs `web.startCommand`, waits for `web.readyPath`, and stops what it started (by the
+PID on the port, never by process name). The browser toolchain (Playwright, axe, Lighthouse CI) installs itself
+once into `~/.claude/scripts/qa-gate/node_modules` on first use; Pa11y comes from the global install.
 
 Set `QA_GATE_HOME` to run a checkout other than `~/.claude/scripts/qa-gate` (the shim honours it).
 
@@ -36,8 +43,7 @@ qa-gate.sh init [--web]
 --json-only              print only the JSON verdict path
 ```
 
-Exit codes: `0` PASS · `1` FAIL · `3` usage or internal error.
-`staging`, `compliance` and `deploy` print `SKIP module not installed (F0b)` until that phase lands.
+Exit codes: `0` PASS · `1` FAIL · `3` usage or internal error. `deploy` prints SKIP until phase F4.
 
 ## Stages and checks
 
@@ -57,6 +63,13 @@ Exit codes: `0` PASS · `1` FAIL · `3` usage or internal error.
 | build | `docker-build` | yes | `docker build` of the first Dockerfile (`build.dockerfile`, `./Dockerfile`, `apps/*/Dockerfile`) |
 | build | `trivy-image` | yes | Trivy on the built image; FAIL on HIGH/CRITICAL |
 | build | `sbom` | no | CycloneDX SBOM → `qa-report/sbom.cdx.json` |
+| staging | `pa11y` | yes | Pa11y (axe + htmlcs, `web.pa11y.standard`) on every `web.paths` URL; FAIL on any error → `qa-report/pa11y.json` |
+| staging | `lighthouse` | yes | Lighthouse CI, `web.lighthouse.runs` runs per URL and form factor, **median** per category vs `thresholds` → `qa-report/lighthouse.json` (raw runs in `qa-report/_lighthouse/`) |
+| staging | `e2e` | yes | the repo's `test:e2e` script (or `commands.<stack>.e2e`) with `E2E_BASE_URL` / `PLAYWRIGHT_BASE_URL` set; SKIP when undefined |
+| staging | `nuclei` | yes | Docker Nuclei, `web.nuclei.templates` at `severity`; the container reaches the host app through `host.docker.internal` → `qa-report/nuclei.jsonl` |
+| compliance | `axe` | yes | axe-core via Playwright with `web.axe.tags` (WCAG 2.1 AA + `EN-301-549`); `warnTags` (WCAG 2.2) only warn; FAIL on serious/critical → `qa-report/axe.json` |
+| compliance | `legal` | yes | `compliance-scan.mjs`: Impressum/Datenschutz/`/barrierefreiheit` reachable and linked, statement names EN 301 549 + contact, no remote fonts or third-party hosts before consent, no tracking cookies before consent, reject button as prominent as accept (when `legal.consent.required`), `<html lang>`, security headers, checkout MwSt/Zahlungspflichtig/AGB/Widerruf (when `legal.checkoutPath`) → `qa-report/compliance-scan.json` |
+| compliance | `evidence` | no | `qa-report/compliance-<date>.md`: the dated bundle for the client's DSB (axe, Pa11y, Lighthouse, legal table, Nuclei, manual BITV part) |
 
 With several stacks in one repo, per-stack ids read `typecheck@go`, `unit@python`, and so on.
 A Docker-based check with Docker stopped is FAIL (reason in the summary); `--no-docker` turns it into SKIP.
@@ -104,7 +117,12 @@ Everything else (tool output, debug) is in the log file, never on stdout.
 | `trivy.image` / `severity` / `ignoreUnfixed` / `scanners` | pinned tag / `HIGH,CRITICAL` / true / `vuln,misconfig,secret` | `.trivyignore` is honoured |
 | `audit.level` | `high` | audit threshold for the package manager |
 | `build.dockerfile` / `context` / `target` | auto / `.` / `` | image build inputs |
-| `web.urls` | `[]` | consumed by the F0b web + compliance modules; empty → those stages SKIP |
+| `web.baseUrl` / `paths` / `startCommand` / `readyPath` / `startTimeoutSec` | `""` / `["/"]` / `""` / `/` / 90 | target app for staging + compliance; empty baseUrl → both stages SKIP |
+| `web.lighthouse.runs` / `formFactors` / `thresholds` | 3 / mobile+desktop / perf 80 · a11y 95 · best-practices 90 · seo 90 | median of the runs must reach every threshold |
+| `web.pa11y.standard` / `runners` | `WCAG2AA` / axe + htmlcs | |
+| `web.axe.tags` / `warnTags` / `blockImpacts` | WCAG 2.1 AA + EN-301-549 / wcag22aa / serious, critical | |
+| `web.nuclei.enabled` / `image` / `templates` / `severity` | true / pinned / misconfiguration + exposures / high,critical | |
+| `legal.*Path` / `checkoutPath` / `allowedHosts` / `consent` / `requiredHeaders` | `/impressum` `/datenschutz` `/barrierefreiheit` / `""` / `[]` / not required, DE+EN button texts / CSP, nosniff, X-Frame, Referrer-Policy | the legal scan inputs; add first-party CDN hosts to `allowedHosts` |
 | `report.dir` / `keepLogs` | `qa-report` / 10 | where verdicts and logs go; older logs per stage are pruned |
 
 ## Adding a stack
@@ -120,12 +138,21 @@ Everything else (tool output, debug) is in the log file, never on stdout.
 bash tests/run-tests.sh
 ```
 
-Fixtures under `tests/fixtures/{node,go,python}` are copied into temp git repos. Tests cover: PASS on each
+Fixtures under `tests/fixtures/{node,go,python,web}` are copied into temp git repos. The `web` fixture is a
+static German pizzeria site with a `BAD=1` variant (Google Fonts before consent, no reject button, no headers, no
+alt) that must FAIL `compliance`. Tests cover: PASS on each
 fixture (pre-commit and pr), a planted GitHub token blocking without leaking, the coverage ratchet, gate-config
 tampering, `init` idempotency and the installed hook, and, when Docker is up, a vulnerable dependency plus a
 planted AWS key and command injection for Semgrep. The node fixture installs its own `node_modules` once.
 
+## Templates for the German layer
+
+`templates/barrierefreiheit.md` (the § 19 BFSGV page copy, DE), `templates/BITV-SELBSTBEWERTUNG.md` (manual
+Prüfschritte per release), `templates/ci.yml` (GitHub Actions caller that fetches the gate from claude-stack;
+needs the `CLAUDE_STACK_TOKEN` secret).
+
 ## Requirements
 
-Git Bash (Windows) or bash (Linux) · Node.js · git · Docker for `semgrep`, `trivy-*` and `docker-build` ·
-optional: `govulncheck`, `staticcheck`, `pip-audit`, `ruff`, `pytest-cov`. No jq, no Python for the tool itself.
+Git Bash (Windows) or bash (Linux) · Node.js · git · curl · Docker for `semgrep`, `trivy-*`, `docker-build`, `nuclei` ·
+`pa11y` global (`npm i -g pa11y`) · optional: `govulncheck`, `staticcheck`, `pip-audit`, `ruff`, `pytest-cov`.
+No jq, no Python for the tool itself.

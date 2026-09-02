@@ -1,0 +1,11 @@
+{
+  "name": "qa-gate-toolchain",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Browser toolchain for the qa-gate staging and compliance stages (installed once, shared by every repo).",
+  "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@lhci/cli": "0.15.1",
+    "playwright": "1.56.1"
+  }
+}

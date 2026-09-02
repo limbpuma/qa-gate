@@ -10,10 +10,16 @@ readonly QA_GATE_HOME
 readonly LIB_DIR="$QA_GATE_HOME/lib"
 readonly TPL_DIR="$QA_GATE_HOME/templates"
 
-for lib in common detect secrets audit config-guard semgrep trivy stack-node stack-go stack-python summary init stages; do
+for lib in common detect secrets audit config-guard semgrep trivy stack-node stack-go stack-python summary init; do
   # shellcheck disable=SC1090
   source "$LIB_DIR/$lib.sh"
 done
+for lib in common pa11y lighthouse e2e nuclei axe compliance evidence; do
+  # shellcheck disable=SC1090
+  source "$LIB_DIR/web/$lib.sh"
+done
+# shellcheck disable=SC1091
+source "$LIB_DIR/stages.sh"
 
 print_usage() {
   cat <<'USAGE'
@@ -25,7 +31,7 @@ Usage:
 
 Stages:
   pre-commit | pr | build | staging | compliance | deploy | all
-  (staging / compliance / deploy print SKIP until module F0b is installed)
+  (staging + compliance need web.baseUrl in qa-gate.config.json; deploy prints SKIP until F4)
 
 Options:
   --repo <path>            target repo (default: git toplevel of cwd)

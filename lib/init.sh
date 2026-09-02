@@ -105,17 +105,15 @@ init_agents_dod() {
 # Step 6: .gitignore contains qa-report/_logs/.
 init_gitignore() {
   local dest="$REPO_PATH/.gitignore"
-  if [[ ! -f "$dest" ]]; then
-    printf 'qa-report/_logs/\n' > "$dest"
-    write_marker "wrote   $dest"
-    return 0
-  fi
-  if grep -q "^qa-report/_logs/" "$dest"; then
-    write_marker "exists  $dest"
-    return 0
-  fi
-  printf 'qa-report/_logs/\n' >> "$dest"
-  write_marker "appended qa-report/_logs/ to $dest"
+  local line added=0
+  [[ -f "$dest" ]] || : > "$dest"
+  # Why: verdicts and tool reports are regenerated on every run; only the ratchet and the evidence bundles are history.
+  for line in "qa-report/_logs/" "qa-report/_lighthouse/" "qa-report/*.json" "qa-report/*.jsonl" "!qa-report/coverage-ratchet.json"; do
+    if grep -qF "$line" "$dest"; then continue; fi
+    printf '%s\n' "$line" >> "$dest"
+    added=1
+  done
+  if (( added )); then write_marker "appended qa-report ignore lines to $dest"; else write_marker "exists  $dest"; fi
 }
 
 # Step 7: --web adds a placeholder URL.
@@ -125,7 +123,8 @@ init_web() {
   node -e "
     const j=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));
     j.web = j.web || {};
-    j.web.urls = j.web.urls && j.web.urls.length ? j.web.urls : ['http://localhost:3000'];
+    j.web.baseUrl = j.web.baseUrl || 'http://localhost:3000';
+    j.web.paths = j.web.paths && j.web.paths.length ? j.web.paths : ['/'];
     require('fs').writeFileSync(process.argv[1], JSON.stringify(j, null, 2) + '\n');
   " "$dest"
   write_marker "wrote   $dest (web.urls placeholder)"

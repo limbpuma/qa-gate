@@ -149,8 +149,37 @@ stage_build() {
   run_single_check sbom false trivy_sbom_check "$tag"
 }
 
+# True when the repo configured a web target (web.baseUrl); otherwise web stages SKIP.
+web_configured() { [[ -n "$(web_base_url)" ]]; }
+
+# Wraps a web stage: start the app if needed, run the checks, always stop what we started.
+run_web_stage() {
+  local body="$1"
+  if ! web_configured; then run_check "$STAGE" false mark_skip "web.baseUrl not configured"; return 0; fi
+  if ! web_start_app; then run_check "$STAGE" true mark_fail "app not reachable at $(web_base_url) — see log"; return 0; fi
+  "$body"
+  web_stop_app
+}
+
+stage_staging_body() {
+  run_single_check pa11y true pa11y_check
+  run_single_check lighthouse true lighthouse_check
+  run_single_check e2e true e2e_check
+  run_single_check nuclei true nuclei_check
+}
+
+stage_compliance_body() {
+  run_single_check axe true axe_check
+  run_single_check legal true compliance_scan_check
+  write_verdict
+  run_single_check evidence false evidence_check
+}
+
+stage_staging()    { run_web_stage stage_staging_body; }
+stage_compliance() { run_web_stage stage_compliance_body; }
+
 stage_not_installed() {
-  run_check "$STAGE" false mark_skip "module not installed (F0b)"
+  run_check "$STAGE" false mark_skip "module not installed (F4)"
 }
 
 # Runs one stage end to end: paths, checks, JSON. Does not print or exit.
@@ -164,7 +193,9 @@ run_stage_inner() {
     pre-commit) stage_pre_commit ;;
     pr)         stage_pr ;;
     build)      stage_build ;;
-    staging|compliance|deploy) stage_not_installed ;;
+    staging)    stage_staging ;;
+    compliance) stage_compliance ;;
+    deploy)     stage_not_installed ;;
   esac
   STAGE_DURATION=$(( $(date +%s) - started ))
   write_verdict

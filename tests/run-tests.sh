@@ -182,6 +182,40 @@ test_docker_audit_and_semgrep() {
   pass "$label"
 }
 
+test_web_stages_pass() {
+  local label="T8.web" dest out
+  dest=$(prep_fixture_repo web)
+  out=$(run_gate "$dest" staging) || { fail "$label" "staging exit $? · $(printf '%s' "$out" | head -8)"; return; }
+  grep -qE '^PASS[[:space:]]+pa11y' <<< "$out" || { fail "$label" "pa11y not PASS · $(grep pa11y <<< "$out")"; return; }
+  grep -qE '^PASS[[:space:]]+lighthouse' <<< "$out" || { fail "$label" "lighthouse not PASS · $(grep lighthouse <<< "$out")"; return; }
+  out=$(run_gate "$dest" compliance) || { fail "$label" "compliance exit $? · $(printf '%s' "$out" | head -8)"; return; }
+  grep -qE '^PASS[[:space:]]+axe' <<< "$out" || { fail "$label" "axe not PASS · $(grep axe <<< "$out")"; return; }
+  grep -qE '^PASS[[:space:]]+legal' <<< "$out" || { fail "$label" "legal not PASS · $(grep legal <<< "$out")"; return; }
+  ls "$dest"/qa-report/compliance-*.md >/dev/null 2>&1 || { fail "$label" "evidence bundle missing"; return; }
+  pass "$label"
+}
+
+test_web_compliance_blocks_bad_site() {
+  local label="T9.web-bad" dest out
+  dest=$(prep_fixture_repo web)
+  # The bad variant loads Google Fonts before consent, lacks a reject button, security headers and alt text.
+  node -e '
+    const fs = require("fs"); const p = process.argv[1];
+    const j = JSON.parse(fs.readFileSync(p, "utf8")); j.web.startCommand = "BAD=1 node server.mjs";
+    fs.writeFileSync(p, JSON.stringify(j, null, 2) + "\n");
+  ' "$dest/qa-gate.config.json"
+  out=$(run_gate "$dest" compliance) && { fail "$label" "bad site did not FAIL"; return; }
+  grep -qE '^FAIL[[:space:]]+legal' <<< "$out" || { fail "$label" "legal not FAIL · $(printf '%s' "$out" | head -6)"; return; }
+  grep -qE '^FAIL[[:space:]]+axe' <<< "$out" || { fail "$label" "axe not FAIL · $(grep axe <<< "$out")"; return; }
+  grep -q 'consent.google-fonts' "$dest/qa-report/compliance-scan.json" || { fail "$label" "google-fonts check missing"; return; }
+  node -e '
+    const j = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+    const f = (id) => j.checks.find((c) => c.id === id);
+    process.exit(f("consent.google-fonts").status === "FAIL" && f("consent.banner").status === "FAIL" && f("headers.security").status === "FAIL" ? 0 : 1);
+  ' "$dest/qa-report/compliance-scan.json" || { fail "$label" "expected FAIL on google-fonts, banner and headers"; return; }
+  pass "$label"
+}
+
 # --- Runner ----------------------------------------------------------------
 ensure_node_fixture_deps
 for fixture in node go python; do test_pre_commit_passes "$fixture"; done
@@ -191,6 +225,8 @@ test_coverage_ratchet
 test_gate_config_tamper
 test_init
 test_docker_audit_and_semgrep
+test_web_stages_pass
+test_web_compliance_blocks_bad_site
 
 printf '\n%s passed, %s failed\n' "$PASSED" "$FAILED"
 (( FAILED == 0 ))

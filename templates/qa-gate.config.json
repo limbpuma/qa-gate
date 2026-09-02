@@ -1,14 +1,17 @@
 {
   "version": 1,
   "stack": "auto",
-  "git": { "base": "auto" },
+  "git": {
+    "base": "auto"
+  },
   "commands": {
     "node": {
       "typecheck": "auto",
       "lint": "auto",
       "unit": "auto",
       "coverage": "auto",
-      "integration": "auto"
+      "integration": "auto",
+      "e2e": "auto"
     },
     "go": {
       "build": "go build ./... && go vet ./...",
@@ -18,7 +21,9 @@
     "python": {
       "lint": "ruff check . && ruff format --check .",
       "unit": "pytest -p pytest_cov --cov --cov-report=json:qa-report/_logs/coverage.json -q",
-      "env": { "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1" }
+      "env": {
+        "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"
+      }
     }
   },
   "coverage": {
@@ -28,15 +33,37 @@
     "tolerance": 0.2
   },
   "secrets": {
-    "excludes": ["node_modules", ".git", "qa-report", "dist", ".next", "coverage"]
+    "excludes": [
+      "node_modules",
+      ".git",
+      "qa-report",
+      "dist",
+      ".next",
+      "coverage"
+    ]
   },
   "semgrep": {
     "image": "semgrep/semgrep:1.130.0",
-    "rulesets": ["p/secrets", "p/owasp-top-ten"],
+    "rulesets": [
+      "p/secrets",
+      "p/owasp-top-ten"
+    ],
     "stackRulesets": {
-      "node": ["p/typescript", "p/javascript", "p/react", "p/nextjs", "p/nodejs"],
-      "go": ["p/golang", "p/gosec"],
-      "python": ["p/python", "p/bandit"]
+      "node": [
+        "p/typescript",
+        "p/javascript",
+        "p/react",
+        "p/nextjs",
+        "p/nodejs"
+      ],
+      "go": [
+        "p/golang",
+        "p/gosec"
+      ],
+      "python": [
+        "p/python",
+        "p/bandit"
+      ]
     },
     "blockOn": "ERROR"
   },
@@ -46,12 +73,88 @@
     "ignoreUnfixed": true,
     "scanners": "vuln,misconfig,secret"
   },
-  "audit": { "level": "high" },
+  "audit": {
+    "level": "high"
+  },
   "build": {
     "dockerfile": "auto",
     "context": ".",
     "target": ""
   },
-  "web": { "urls": [] },
-  "report": { "dir": "qa-report", "keepLogs": 10 }
+  "web": {
+    "baseUrl": "",
+    "paths": [
+      "/"
+    ],
+    "startCommand": "",
+    "readyPath": "/",
+    "startTimeoutSec": 90,
+    "lighthouse": {
+      "runs": 3,
+      "formFactors": [
+        "mobile",
+        "desktop"
+      ],
+      "thresholds": {
+        "performance": 80,
+        "accessibility": 95,
+        "best-practices": 90,
+        "seo": 90
+      }
+    },
+    "pa11y": {
+      "standard": "WCAG2AA",
+      "runners": [
+        "axe",
+        "htmlcs"
+      ]
+    },
+    "axe": {
+      "tags": [
+        "wcag2a",
+        "wcag2aa",
+        "wcag21a",
+        "wcag21aa",
+        "EN-301-549"
+      ],
+      "warnTags": [
+        "wcag22aa"
+      ],
+      "blockImpacts": [
+        "serious",
+        "critical"
+      ]
+    },
+    "nuclei": {
+      "enabled": true,
+      "image": "projectdiscovery/nuclei:v3.4.10",
+      "templates": [
+        "http/misconfiguration",
+        "http/exposures"
+      ],
+      "severity": "high,critical"
+    }
+  },
+  "report": {
+    "dir": "qa-report",
+    "keepLogs": 10
+  },
+  "legal": {
+    "impressumPath": "/impressum",
+    "datenschutzPath": "/datenschutz",
+    "barrierefreiheitPath": "/barrierefreiheit",
+    "checkoutPath": "",
+    "allowedHosts": [],
+    "consent": {
+      "required": false,
+      "acceptText": "Akzeptieren|Alle akzeptieren|Zustimmen|Accept",
+      "rejectText": "Ablehnen|Nur notwendige|Reject"
+    },
+    "requiredHeaders": [
+      "content-security-policy",
+      "x-content-type-options",
+      "x-frame-options",
+      "referrer-policy"
+    ]
+  }
 }

@@ -44,23 +44,30 @@ secrets_filter_excludes() {
   done
 }
 
-# Count pattern hits in one file, logging rule + file:line only.
-secrets_scan_file() {
-  local file="$1" hits=0 pattern id regex line_no
-  local abs="$REPO_PATH/$file"
-  [[ -f "$abs" ]] || return 0
-  if [[ "$file" =~ $DOTENV_FILE_REGEX ]] && [[ ! "$file" =~ $DOTENV_TEMPLATE_REGEX ]]; then
-    log_error "SECRET DOTENV_FILE  $file"
-    hits=$((hits + 1))
-  fi
+# Committed .env files (templates excluded); prints the number of hits.
+secrets_scan_dotenv() {
+  local file hits=0
+  for file in "$@"; do
+    if [[ "$file" =~ $DOTENV_FILE_REGEX ]] && [[ ! "$file" =~ $DOTENV_TEMPLATE_REGEX ]]; then
+      log_error "SECRET DOTENV_FILE  $file"
+      hits=$((hits + 1))
+    fi
+  done
+  printf '%s' "$hits"
+}
+
+# One grep per pattern over all files (process spawns dominate on Windows); logs rule + file:line only.
+secrets_scan_patterns() {
+  local pattern id regex hit hits=0
   for pattern in "${SECRETS_PATTERNS[@]}"; do
     id="${pattern%%|*}"
     regex="${pattern#*|}"
-    while IFS= read -r line_no; do
-      [[ -z "$line_no" ]] && continue
-      log_error "SECRET $id  $file:$line_no"
+    while IFS= read -r hit; do
+      [[ -z "$hit" ]] && continue
+      log_error "SECRET $id  ${hit%%:*}:$(printf '%s' "$hit" | cut -d: -f2)"
       hits=$((hits + 1))
-    done < <(grep -nIE "$regex" "$abs" 2>/dev/null | cut -d: -f1)
+    # Why -H: with a single file grep omits the filename and the "file:line" cut would expose the matched text.
+    done < <(cd "$REPO_PATH" && grep -nIHE "$regex" -- "$@" 2>/dev/null | cut -d: -f1,2)
   done
   printf '%s' "$hits"
 }
@@ -68,15 +75,11 @@ secrets_scan_file() {
 secrets_check() {
   [[ -d "$REPO_PATH/.git" ]] || { mark_skip "not a git repo"; return 0; }
   local files
-  files=$(secrets_files | secrets_filter_excludes)
-  [[ -z "$files" ]] && { mark_pass "no files to scan"; return 0; }
+  mapfile -t files < <(secrets_files | secrets_filter_excludes | while IFS= read -r f; do [[ -f "$REPO_PATH/$f" ]] && printf '%s\n' "$f"; done)
+  (( ${#files[@]} == 0 )) && { mark_pass "no files to scan"; return 0; }
 
-  local file findings=0 scanned=0
-  while IFS= read -r file; do
-    [[ -z "$file" ]] && continue
-    scanned=$((scanned + 1))
-    findings=$(( findings + $(secrets_scan_file "$file") ))
-  done <<< "$files"
+  local findings scanned=${#files[@]}
+  findings=$(( $(secrets_scan_dotenv "${files[@]}") + $(secrets_scan_patterns "${files[@]}") ))
 
   if (( findings > 0 )); then
     R_COUNT_JSON="{\"findings\":$findings}"

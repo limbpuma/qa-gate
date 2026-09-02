@@ -1,0 +1,35 @@
+{
+  "stack": "node",
+  "web": {
+    "baseUrl": "http://127.0.0.1:4173",
+    "paths": [
+      "/",
+      "/speisekarte",
+      "/kasse"
+    ],
+    "startCommand": "node server.mjs",
+    "readyPath": "/",
+    "startTimeoutSec": 30,
+    "lighthouse": {
+      "runs": 1,
+      "formFactors": [
+        "mobile"
+      ],
+      "thresholds": {
+        "performance": 80,
+        "accessibility": 95,
+        "best-practices": 80,
+        "seo": 80
+      }
+    },
+    "nuclei": {
+      "enabled": false
+    }
+  },
+  "legal": {
+    "checkoutPath": "/kasse",
+    "consent": {
+      "required": true
+    }
+  }
+}

@@ -1,0 +1,66 @@
+# .github/workflows/ci.yml — runs the global quality gate on every push and PR.
+# Requires one repository secret: CLAUDE_STACK_TOKEN (read access to limbpuma/claude-stack).
+# The gate itself is not vendored into the repo: CI fetches the same version every developer runs.
+name: qa-gate
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # gate-config compares against the base branch
+
+      - name: Fetch qa-gate from claude-stack
+        run: |
+          git clone --depth 1 --filter=blob:none --sparse \
+            "https://x-access-token:${{ secrets.CLAUDE_STACK_TOKEN }}@github.com/limbpuma/claude-stack.git" "$HOME/claude-stack"
+          git -C "$HOME/claude-stack" sparse-checkout set scripts/qa-gate
+          echo "QA_GATE_HOME=$HOME/claude-stack/scripts/qa-gate" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: pnpm/action-setup@v4
+        if: hashFiles('pnpm-lock.yaml') != ''
+        with:
+          version: 10
+      - uses: actions/setup-go@v5
+        if: hashFiles('go.mod') != ''
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-python@v5
+        if: hashFiles('pyproject.toml') != ''
+        with:
+          python-version: '3.12'
+
+      - name: Install project dependencies
+        run: |
+          if [ -f pnpm-lock.yaml ]; then pnpm install --frozen-lockfile; fi
+          if [ -f package-lock.json ]; then npm ci; fi
+          if [ -f pyproject.toml ]; then pip install -e . ruff pytest pytest-cov pip-audit; fi
+          if [ -f go.mod ]; then go install golang.org/x/vuln/cmd/govulncheck@latest; fi
+
+      - name: Gate — pr (Docker available on ubuntu runners)
+        run: bash "$QA_GATE_HOME/qa-gate.sh" pr --repo "$GITHUB_WORKSPACE"
+
+      - name: Gate — build
+        if: hashFiles('Dockerfile', 'apps/*/Dockerfile') != ''
+        run: bash "$QA_GATE_HOME/qa-gate.sh" build --repo "$GITHUB_WORKSPACE"
+
+      - name: Upload gate reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-report
+          path: |
+            qa-report/*.json
+            qa-report/*.md
+            qa-report/_logs/*.log
+          retention-days: 14
