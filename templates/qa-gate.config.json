@@ -155,6 +155,13 @@
       "x-content-type-options",
       "x-frame-options",
       "referrer-policy"
-    ]
+    ],
+    "ai": {
+      "enabled": "auto",
+      "chatSelector": "",
+      "disclosureText": "KI|künstliche Intelligenz|automatisiert|Chatbot|Bot|AI",
+      "providers": [],
+      "registerPath": "docs/AI-ACT-REGISTER.md"
+    }
   }
 }

@@ -59,6 +59,7 @@ Exit codes: `0` PASS · `1` FAIL · `3` usage or internal error. `deploy` prints
 | pr | `audit` | yes | `npm/pnpm/yarn audit --audit-level` · `govulncheck` · `pip-audit` (SKIP when the tool is missing) |
 | pr | `semgrep` | yes | Docker `semgrep scan` with `semgrep.rulesets` + the stack's `stackRulesets`; FAIL on ERROR findings, WARN on WARNING findings; report `qa-report/semgrep.json` |
 | pr | `trivy-fs` | yes | Docker `trivy fs` (vuln, misconfig, secret); FAIL on HIGH/CRITICAL; report `qa-report/trivy-fs.json` |
+| pr | `ai-register` | yes | when a manifest pulls in an AI SDK (openai, anthropic, langchain, minimax, ollama, …) the repo must have `docs/AI-ACT-REGISTER.md` with the six sections (System, Risikoklasse, Art. 50, Art. 4, Anbieter, Logging); missing → FAIL, `[TODO]` placeholders → WARN, no AI SDK → SKIP. `init` writes the template |
 | pr | `gate-config` | yes | `qa-gate.config.json`, `.semgrepignore`, `.trivyignore` hashed against the base branch; a change is FAIL (WARN with `--allow-config-change`) |
 | build | `docker-build` | yes | `docker build` of the first Dockerfile (`build.dockerfile`, `./Dockerfile`, `apps/*/Dockerfile`) |
 | build | `trivy-image` | yes | Trivy on the built image; FAIL on HIGH/CRITICAL |
@@ -68,7 +69,7 @@ Exit codes: `0` PASS · `1` FAIL · `3` usage or internal error. `deploy` prints
 | staging | `e2e` | yes | the repo's `test:e2e` script (or `commands.<stack>.e2e`) with `E2E_BASE_URL` / `PLAYWRIGHT_BASE_URL` set; SKIP when undefined |
 | staging | `nuclei` | yes | Docker Nuclei, `web.nuclei.templates` at `severity`; the container reaches the host app through `host.docker.internal` → `qa-report/nuclei.jsonl` |
 | compliance | `axe` | yes | axe-core via Playwright with `web.axe.tags` (WCAG 2.1 AA + `EN-301-549`); `warnTags` (WCAG 2.2) only warn; FAIL on serious/critical → `qa-report/axe.json` |
-| compliance | `legal` | yes | `compliance-scan.mjs`: Impressum/Datenschutz/`/barrierefreiheit` reachable and linked, statement names EN 301 549 + contact, no remote fonts or third-party hosts before consent, no tracking cookies before consent, reject button as prominent as accept (when `legal.consent.required`), `<html lang>`, security headers, checkout MwSt/Zahlungspflichtig/AGB/Widerruf (when `legal.checkoutPath`) → `qa-report/compliance-scan.json` |
+| compliance | `legal` | yes | `compliance-scan.mjs`: Impressum/Datenschutz/`/barrierefreiheit` reachable and linked, statement names EN 301 549 + contact, no remote fonts or third-party hosts before consent, no tracking cookies before consent, reject button as prominent as accept (when `legal.consent.required`), `<html lang>`, security headers, checkout MwSt/Zahlungspflichtig/AGB/Widerruf (when `legal.checkoutPath`), **AI Act**: `ai.disclosure` (visible "KI" notice inside `legal.ai.chatSelector`, Art. 50 Abs. 1), `ai.content-label` (every `[data-ai-generated]` element carries a visible label, Art. 50 Abs. 2/4), `ai.datenschutz-provider` (the Datenschutzerklärung names every AI provider configured or observed on the wire, DSGVO Art. 13), `ai.human-path` (tel:/mailto:/Kontakt next to the AI, DSGVO Art. 22 Abs. 3, WARN) → `qa-report/compliance-scan.json` |
 | compliance | `evidence` | no | `qa-report/compliance-<date>.md`: the dated bundle for the client's DSB (axe, Pa11y, Lighthouse, legal table, Nuclei, manual BITV part) |
 
 With several stacks in one repo, per-stack ids read `typecheck@go`, `unit@python`, and so on.
@@ -122,6 +123,7 @@ Everything else (tool output, debug) is in the log file, never on stdout.
 | `web.pa11y.standard` / `runners` | `WCAG2AA` / axe + htmlcs | |
 | `web.axe.tags` / `warnTags` / `blockImpacts` | WCAG 2.1 AA + EN-301-549 / wcag22aa / serious, critical | |
 | `web.nuclei.enabled` / `image` / `templates` / `severity` | true / pinned / misconfiguration + exposures / high,critical | |
+| `legal.ai.enabled` / `chatSelector` / `disclosureText` / `providers` / `registerPath` | `auto` / `""` / KI-Regex / `[]` / `docs/AI-ACT-REGISTER.md` | `auto` = AI checks run when `chatSelector` is set; list providers the backend calls (not visible on the wire) in `providers` |
 | `legal.*Path` / `checkoutPath` / `allowedHosts` / `consent` / `requiredHeaders` | `/impressum` `/datenschutz` `/barrierefreiheit` / `""` / `[]` / not required, DE+EN button texts / CSP, nosniff, X-Frame, Referrer-Policy | the legal scan inputs; add first-party CDN hosts to `allowedHosts` |
 | `report.dir` / `keepLogs` | `qa-report` / 10 | where verdicts and logs go; older logs per stage are pruned |
 
@@ -140,7 +142,7 @@ bash tests/run-tests.sh
 
 Fixtures under `tests/fixtures/{node,go,python,web}` are copied into temp git repos. The `web` fixture is a
 static German pizzeria site with a `BAD=1` variant (Google Fonts before consent, no reject button, no headers, no
-alt) that must FAIL `compliance`. Tests cover: PASS on each
+alt, AI chat without disclosure) that must FAIL `compliance`; T10 covers the `ai-register` check. Tests cover: PASS on each
 fixture (pre-commit and pr), a planted GitHub token blocking without leaking, the coverage ratchet, gate-config
 tampering, `init` idempotency and the installed hook, and, when Docker is up, a vulnerable dependency plus a
 planted AWS key and command injection for Semgrep. The node fixture installs its own `node_modules` once.
@@ -148,7 +150,8 @@ planted AWS key and command injection for Semgrep. The node fixture installs its
 ## Templates for the German layer
 
 `templates/barrierefreiheit.md` (the § 19 BFSGV page copy, DE), `templates/BITV-SELBSTBEWERTUNG.md` (manual
-Prüfschritte per release), `templates/ci.yml` (GitHub Actions caller that fetches the gate from claude-stack;
+Prüfschritte per release), `templates/AI-ACT-REGISTER.md` (KI-VO register: system, risk class, Art. 50 measures,
+Art. 4 literacy, provider, logging), `templates/ci.yml` (GitHub Actions caller that fetches the gate from claude-stack;
 needs the `CLAUDE_STACK_TOKEN` secret).
 
 ## Requirements

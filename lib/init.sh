@@ -130,6 +130,17 @@ init_web() {
   write_marker "wrote   $dest (web.urls placeholder)"
 }
 
+# Step 8: AI-Act register when the manifests pull in an AI SDK (KI-VO documentation duty).
+init_ai_register() {
+  local tpl="$1" dest
+  dest="$REPO_PATH/$(ai_register_path)"
+  if [[ -z "$(ai_sdk_evidence)" ]]; then write_marker "skip    $(ai_register_path) (no AI SDK detected)"; return 0; fi
+  if [[ -f "$dest" ]]; then write_marker "exists  $dest"; return 0; fi
+  ensure_dir "$(dirname "$dest")"
+  cp "$tpl" "$dest"
+  write_marker "wrote   $dest (fill the [TODO] fields)"
+}
+
 init_all() {
   local web=0
   if [[ "${1:-}" == "1" || "${1:-}" == "--web" ]]; then web=1; fi
@@ -141,6 +152,7 @@ init_all() {
   init_hook          "$tpl_dir/pre-commit"
   init_agents_dod    "$tpl_dir/AGENTS-DoD.md"
   init_gitignore
+  init_ai_register   "$tpl_dir/AI-ACT-REGISTER.md"
   if (( web )); then init_web; fi
   return 0
 }

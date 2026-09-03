@@ -211,8 +211,26 @@ test_web_compliance_blocks_bad_site() {
   node -e '
     const j = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
     const f = (id) => j.checks.find((c) => c.id === id);
-    process.exit(f("consent.google-fonts").status === "FAIL" && f("consent.banner").status === "FAIL" && f("headers.security").status === "FAIL" ? 0 : 1);
-  ' "$dest/qa-report/compliance-scan.json" || { fail "$label" "expected FAIL on google-fonts, banner and headers"; return; }
+    process.exit(f("consent.google-fonts").status === "FAIL" && f("consent.banner").status === "FAIL" && f("headers.security").status === "FAIL"
+      && f("ai.disclosure").status === "FAIL" && f("ai.content-label").status === "FAIL" && f("ai.datenschutz-provider").status === "FAIL" ? 0 : 1);
+  ' "$dest/qa-report/compliance-scan.json" || { fail "$label" "expected FAIL on google-fonts, banner, headers and the three AI checks"; return; }
+  pass "$label"
+}
+
+test_ai_register() {
+  local label="T10.ai-register" dest out
+  dest=$(prep_fixture_repo node)
+  # An AI SDK in the manifest without a register must block; init writes the template; placeholders only warn.
+  node -e '
+    const fs = require("fs"); const p = process.argv[1];
+    const j = JSON.parse(fs.readFileSync(p, "utf8")); j.dependencies = { openai: "^4.0.0" };
+    fs.writeFileSync(p, JSON.stringify(j, null, 2) + "\n");
+  ' "$dest/package.json"
+  out=$(run_gate "$dest" pr --no-docker --only ai-register) && { fail "$label" "missing register did not FAIL"; return; }
+  grep -qE '^FAIL[[:space:]]+ai-register' <<< "$out" || { fail "$label" "no FAIL ai-register line · $(printf '%s' "$out" | head -4)"; return; }
+  run_gate "$dest" init | grep -q "AI-ACT-REGISTER" || { fail "$label" "init did not write the register"; return; }
+  out=$(run_gate "$dest" pr --no-docker --only ai-register) || { fail "$label" "register with placeholders should not block"; return; }
+  grep -qE '^WARN[[:space:]]+ai-register' <<< "$out" || { fail "$label" "expected WARN with [TODO] placeholders · $(grep ai-register <<< "$out")"; return; }
   pass "$label"
 }
 
@@ -227,6 +245,7 @@ test_init
 test_docker_audit_and_semgrep
 test_web_stages_pass
 test_web_compliance_blocks_bad_site
+test_ai_register
 
 printf '\n%s passed, %s failed\n' "$PASSED" "$FAILED"
 (( FAILED == 0 ))

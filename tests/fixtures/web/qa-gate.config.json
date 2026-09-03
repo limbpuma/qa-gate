@@ -30,6 +30,12 @@
     "checkoutPath": "/kasse",
     "consent": {
       "required": true
+    },
+    "ai": {
+      "chatSelector": "#ki-chat",
+      "providers": [
+        "MiniMax"
+      ]
     }
   }
 }
