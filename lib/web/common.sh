@@ -79,7 +79,7 @@ web_stop_app() {
     pid=$(powershell -NoProfile -Command "(Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty OwningProcess)" 2>/dev/null | tr -d '\r ')
     if [[ -n "$pid" ]]; then taskkill //PID "$pid" //T //F >>"$LOG_FILE" 2>&1 || true; fi
   else
-    pid=$(lsof -ti "tcp:$port" 2>/dev/null | head -1)
+    pid=$(lsof -ti "tcp:$port" 2>/dev/null | head -1 || true)
     if [[ -n "$pid" ]]; then kill "$pid" >>"$LOG_FILE" 2>&1 || true; fi
   fi
   WEB_APP_STARTED=0

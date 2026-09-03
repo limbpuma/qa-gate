@@ -241,6 +241,22 @@ test_ai_register() {
   pass "$label"
 }
 
+test_env_without_profile_and_no_dockerfile() {
+  local label="T11.env-profile" dest out
+  dest=$(prep_fixture_repo node)
+  # Regression: a .env without DEPLOY_PROFILE crashed resolve_profile under set -e -o pipefail (reported 2026-09-03).
+  printf 'DATABASE_URL=postgres://x\nMAIL_MODE=fake\n' > "$dest/.env"
+  out=$(run_gate "$dest" pr --no-docker --only typecheck) || { fail "$label" "gate died with a .env lacking DEPLOY_PROFILE (exit $?)"; return; }
+  grep -q '· portfolio-demo ·' <<< "$out" || { fail "$label" "default profile not resolved · $(head -1 <<< "$out")"; return; }
+  printf 'DEPLOY_PROFILE=mvp-client\n' >> "$dest/.env"
+  out=$(run_gate "$dest" pr --no-docker --only typecheck) || { fail "$label" "gate died with DEPLOY_PROFILE set"; return; }
+  grep -q '· mvp-client ·' <<< "$out" || { fail "$label" "DEPLOY_PROFILE not honoured · $(head -1 <<< "$out")"; return; }
+  # build without a Dockerfile must SKIP, not abort (resolve_dockerfile runs outside run_check).
+  out=$(run_gate "$dest" build) || { fail "$label" "build without Dockerfile exited $?"; return; }
+  grep -qE '^SKIP[[:space:]]+docker-build' <<< "$out" || { fail "$label" "docker-build not SKIP · $(head -3 <<< "$out")"; return; }
+  pass "$label"
+}
+
 # --- Runner ----------------------------------------------------------------
 ensure_node_fixture_deps
 for fixture in node go python; do test_pre_commit_passes "$fixture"; done
@@ -253,6 +269,7 @@ test_docker_audit_and_semgrep
 test_web_stages_pass
 test_web_compliance_blocks_bad_site
 test_ai_register
+test_env_without_profile_and_no_dockerfile
 
 printf '\n%s passed, %s failed\n' "$PASSED" "$FAILED"
 (( FAILED == 0 ))

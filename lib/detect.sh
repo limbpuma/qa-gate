@@ -76,7 +76,8 @@ resolve_profile() {
   if [[ -n "$cfg" && "$cfg" != "auto" ]]; then PROFILE="$cfg"; return 0; fi
   for env_file in "$REPO_PATH/.env" "$REPO_PATH/infra/.env" "$REPO_PATH/deploy/.env"; do
     [[ -f "$env_file" ]] || continue
-    value=$(grep -E '^DEPLOY_PROFILE=' "$env_file" | tail -1 | cut -d= -f2- | tr -d '"\r ')
+    # Why "|| true": under set -e -o pipefail a grep with no match (the normal case) would abort the whole gate.
+    value=$(grep -E '^DEPLOY_PROFILE=' "$env_file" 2>/dev/null | tail -1 | cut -d= -f2- | tr -d '"\r ' || true)
     if [[ -n "$value" ]]; then PROFILE="$value"; return 0; fi
   done
   PROFILE="$DEFAULT_PROFILE"

@@ -125,6 +125,8 @@ resolve_dockerfile() {
   for d in "$REPO_PATH"/apps/*/Dockerfile; do
     [[ -f "$d" ]] && { printf '%s' "${d#"$REPO_PATH"/}"; return 0; }
   done
+  # Why explicit: this runs outside run_check, so a failing last test would abort the gate under set -e.
+  return 0
 }
 
 docker_build_check() {
