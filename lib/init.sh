@@ -141,6 +141,17 @@ init_ai_register() {
   write_marker "wrote   $dest (fill the [TODO] fields)"
 }
 
+# Step 9: Claude Code agents read CLAUDE.md, not AGENTS.md — same DoD block there when the file exists.
+init_claude_md_dod() {
+  local tpl="$1" dest="$REPO_PATH/CLAUDE.md"
+  [[ -f "$dest" ]] || { write_marker "skip    $dest (no CLAUDE.md in this repo)"; return 0; }
+  if grep -q "<!-- qa-gate:dod -->" "$dest"; then write_marker "exists  $dest (DoD block present)"; return 0; fi
+  printf '
+%s
+' "$(cat "$tpl")" >> "$dest"
+  write_marker "appended DoD block to $dest"
+}
+
 init_all() {
   local web=0
   if [[ "${1:-}" == "1" || "${1:-}" == "--web" ]]; then web=1; fi
@@ -151,6 +162,7 @@ init_all() {
   init_ignore_files  "$tpl_dir"
   init_hook          "$tpl_dir/pre-commit"
   init_agents_dod    "$tpl_dir/AGENTS-DoD.md"
+  init_claude_md_dod "$tpl_dir/AGENTS-DoD.md"
   init_gitignore
   init_ai_register   "$tpl_dir/AI-ACT-REGISTER.md"
   if (( web )); then init_web; fi
