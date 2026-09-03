@@ -29,6 +29,11 @@ gate_config_check() {
   [[ -n "$BASE_REF" ]] || { mark_skip "no base ref"; return 0; }
   (cd "$REPO_PATH" && git rev-parse --verify --quiet "$BASE_REF" >/dev/null 2>&1) || { mark_skip "base ref $BASE_REF not found"; return 0; }
 
+  # First install: the base branch has no gate config yet, so there is nothing to compare against.
+  if ! (cd "$REPO_PATH" && git cat-file -e "${BASE_REF}:qa-gate.config.json" 2>/dev/null); then
+    mark_skip "no gate config in $BASE_REF yet (first install — commit it)"
+    return 0
+  fi
   local current base
   current=$(gate_config_blob_local | sha256sum | awk '{print $1}')
   base=$(gate_config_blob_at_ref "$BASE_REF" | sha256sum | awk '{print $1}')

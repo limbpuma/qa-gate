@@ -93,6 +93,7 @@ main() {
 
   load_config
   detect_stack "$(cfg_get ".stack")"
+  resolve_profile
   git_base_ref "$(cfg_get ".git.base")"
 
   if [[ "$STAGE" == "all" ]]; then

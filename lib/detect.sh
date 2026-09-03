@@ -68,6 +68,30 @@ detect_node_pm() {
   echo "npm"
 }
 
+# PROFILE: config "profile" ("auto" → DEPLOY_PROFILE from .env / infra/.env, else portfolio-demo).
+readonly DEFAULT_PROFILE="portfolio-demo"
+resolve_profile() {
+  local cfg env_file value
+  cfg=$(cfg_get ".profile")
+  if [[ -n "$cfg" && "$cfg" != "auto" ]]; then PROFILE="$cfg"; return 0; fi
+  for env_file in "$REPO_PATH/.env" "$REPO_PATH/infra/.env" "$REPO_PATH/deploy/.env"; do
+    [[ -f "$env_file" ]] || continue
+    value=$(grep -E '^DEPLOY_PROFILE=' "$env_file" | tail -1 | cut -d= -f2- | tr -d '"\r ')
+    if [[ -n "$value" ]]; then PROFILE="$value"; return 0; fi
+  done
+  PROFILE="$DEFAULT_PROFILE"
+}
+
+# Checks the current profile skips (JSON array from profiles.<name>.skip).
+profile_skips() { cfg_get ".profiles.${PROFILE}.skip"; }
+
+# A profile may override a web.lighthouse.* value: profile_cfg ".lighthouse.runs" ".web.lighthouse.runs"
+profile_cfg() {
+  local value
+  value=$(cfg_get ".profiles.${PROFILE}$1")
+  if [[ -n "$value" ]]; then printf '%s' "$value"; else cfg_get "$2"; fi
+}
+
 # BASE_REF: config value, else main, else master, else empty.
 git_base_ref() {
   local cfg_base="$1"

@@ -18,8 +18,8 @@ lighthouse_collect() {
 lighthouse_check() {
   ensure_web_toolchain || { mark_fail "web toolchain install failed — see log"; return 0; }
   local runs factors url_args factor
-  runs=$(cfg_get ".web.lighthouse.runs"); runs="${runs:-3}"
-  factors=$(node -e 'process.stdout.write(JSON.parse(process.argv[1]||"[]").join(" "))' "$(cfg_get ".web.lighthouse.formFactors")")
+  runs=$(profile_cfg ".lighthouse.runs" ".web.lighthouse.runs"); runs="${runs:-3}"
+  factors=$(node -e 'process.stdout.write(JSON.parse(process.argv[1]||"[]").join(" "))' "$(profile_cfg ".lighthouse.formFactors" ".web.lighthouse.formFactors")")
   [[ -z "$factors" ]] && factors="mobile desktop"
   url_args=$(web_urls | sed 's/^/--url=/' | tr '\n' ' ')
   rm -rf "${REPO_PATH:?}/$LIGHTHOUSE_WORK_DIR"

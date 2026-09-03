@@ -27,8 +27,8 @@ print_check_line() {
 print_summary() {
   local count=${#CHECK_RESULTS[@]} pass_count=0 collapsed=0
   local record id status duration text
-  printf 'QA-GATE %s · %s · %s · %ss · %s\n' \
-    "$STAGE" "$(basename "$REPO_PATH")" "${STAGE_STARTED_AT:0:16}" "$STAGE_DURATION" "$(stage_verdict)"
+  printf 'QA-GATE %s · %s · %s · %s · %ss · %s\n' \
+    "$STAGE" "$(basename "$REPO_PATH")" "$PROFILE" "${STAGE_STARTED_AT:0:16}" "$STAGE_DURATION" "$(stage_verdict)"
 
   for record in "${CHECK_RESULTS[@]}"; do
     IFS='|' read -r _ status _ _ _ _ <<< "$record"
@@ -50,7 +50,7 @@ print_summary() {
 write_verdict() {
   local records
   records=$(printf '%s\n' "${CHECK_RESULTS[@]}")
-  QG_STAGE="$STAGE" QG_REPO="$(basename "$REPO_PATH")" QG_STACK="$STACK_LIST" \
+  QG_STAGE="$STAGE" QG_REPO="$(basename "$REPO_PATH")" QG_STACK="$STACK_LIST" QG_PROFILE="$PROFILE" \
   QG_VERDICT="$(stage_verdict)" QG_STARTED="$STAGE_STARTED_AT" QG_DURATION="$STAGE_DURATION" \
   QG_HASH="$CONFIG_HASH" QG_BASE="$BASE_REF" QG_LOG="$(relative_to_repo "$LOG_FILE")" \
   node "$LIB_DIR/json.js" build-verdict <<< "$records" > "$JSON_FILE"

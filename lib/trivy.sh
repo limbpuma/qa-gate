@@ -9,13 +9,20 @@ readonly TRIVY_CACHE_VOLUME="qa-gate-trivy-cache"
 readonly DOCKER_SOCKET="/var/run/docker.sock"
 
 trivy_common_args() {
-  local sev ignore scanners args
+  local sev ignore scanners timeout args
   sev=$(cfg_get ".trivy.severity"); sev="${sev:-HIGH,CRITICAL}"
   ignore=$(cfg_get ".trivy.ignoreUnfixed")
-  scanners=$(cfg_get ".trivy.scanners"); scanners="${scanners:-vuln,misconfig,secret}"
-  args="--severity $sev --scanners $scanners"
+  # Why no "secret" scanner by default: the gate has its own secrets check and Trivy's walks every byte (minutes on a build tree).
+  scanners=$(cfg_get ".trivy.scanners"); scanners="${scanners:-vuln,misconfig}"
+  timeout=$(cfg_get ".trivy.timeoutMin"); timeout="${timeout:-15}"
+  args="--severity $sev --scanners $scanners --timeout ${timeout}m"
   if [[ "$ignore" == "true" ]]; then args="$args --ignore-unfixed"; fi
   printf '%s' "$args"
+}
+
+# --skip-dirs for build output, dependencies and gate artefacts (.trivyignore only takes CVE ids, not paths).
+trivy_skip_args() {
+  node -e 'process.stdout.write(JSON.parse(process.argv[1] || "[]").map((d) => "--skip-dirs " + d).join(" "))' "$(cfg_get ".trivy.skipDirs")"
 }
 
 # Prints "high critical" counts over vulnerabilities, misconfigurations and secrets.
@@ -56,7 +63,7 @@ trivy_fs_check() {
   rm -f "$REPO_PATH/$TRIVY_FS_REPORT"
   # shellcheck disable=SC2046
   docker_run run --rm -v "${host}:/src" -v "$TRIVY_CACHE_VOLUME:/root/.cache/trivy" "$image" \
-    fs $(trivy_common_args) --format json --output "/src/$TRIVY_FS_REPORT" /src >>"$LOG_FILE" 2>&1 || true
+    fs $(trivy_common_args) $(trivy_skip_args) --format json --output "/src/$TRIVY_FS_REPORT" /src >>"$LOG_FILE" 2>&1 || true
   trivy_report_verdict "$TRIVY_FS_REPORT"
 }
 

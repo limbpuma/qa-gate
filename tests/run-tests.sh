@@ -179,6 +179,13 @@ test_docker_audit_and_semgrep() {
   grep -qE '^FAIL[[:space:]]+audit' <<< "$out" || { fail "$label" "no FAIL audit line · $(printf '%s' "$out" | head -6)"; return; }
   grep -qE '^(FAIL|WARN)[[:space:]]+semgrep[[:space:]]+[0-9]+ error / [1-9]' <<< "$out" || \
     grep -qE '^FAIL[[:space:]]+semgrep[[:space:]]+[1-9]' <<< "$out" || { fail "$label" "semgrep counted nothing · $(grep semgrep <<< "$out")"; return; }
+  # 7c: on a branch Semgrep scans only the changed files and must still find a key planted there.
+  dest=$(prep_fixture_repo node)
+  (cd "$dest" && git_quiet checkout -b feat/planted)
+  printf 'const AWS_ACCESS_KEY_ID = "AKIAQ7X4K2M9P3N8L5J6";\n' > "$dest/src/planted-branch.js"
+  (cd "$dest" && git_quiet add -A && git_commit_quiet -m "plant on branch")
+  out=$(run_gate "$dest" pr --only semgrep) && { fail "$label" "branch scan did not FAIL on the planted key"; return; }
+  grep -qE '^FAIL[[:space:]]+semgrep[[:space:]]+[1-9].*changed files vs master' <<< "$out" || { fail "$label" "branch scan not scoped or no finding · $(grep semgrep <<< "$out")"; return; }
   pass "$label"
 }
 

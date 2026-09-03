@@ -24,6 +24,25 @@ semgrep_counts() {
   ' "$REPO_PATH/$SEMGREP_REPORT" 2>>"$LOG_FILE"
 }
 
+# Why explicit targets and not --baseline-commit: Semgrep's baseline worktree does not work on a Windows
+# bind mount and silently subtracts the finding against itself (verified 2026-09-03: a planted key vanished).
+# On a branch we therefore hand Semgrep the changed files as targets; on the base branch the whole tree.
+readonly SEMGREP_MAX_CHANGED_FILES=200
+
+# Prints "/src/<file>" for each file changed since the merge-base (empty on the base branch or when too many).
+semgrep_changed_targets() {
+  [[ "$(cfg_get ".semgrep.changedOnly")" == "false" ]] && return 0
+  [[ -n "$BASE_REF" ]] || return 0
+  local head base files count
+  head=$(cd "$REPO_PATH" && git rev-parse HEAD 2>/dev/null) || return 0
+  base=$(cd "$REPO_PATH" && git merge-base "$BASE_REF" HEAD 2>/dev/null) || return 0
+  [[ "$head" == "$base" ]] && return 0
+  files=$(cd "$REPO_PATH" && git diff --name-only --diff-filter=ACMR "$base" HEAD 2>/dev/null | while IFS= read -r f; do [[ -f "$f" ]] && printf '%s\n' "$f"; done)
+  count=$(printf '%s' "$files" | grep -c . || true)
+  (( count == 0 || count > SEMGREP_MAX_CHANGED_FILES )) && return 0
+  printf '%s\n' "$files" | sed 's#^#/src/#'
+}
+
 semgrep_check() {
   require_docker || return 0
   local image block_on host
@@ -33,10 +52,13 @@ semgrep_check() {
   ensure_dir "$REPO_PATH/qa-report"
   rm -f "$REPO_PATH/$SEMGREP_REPORT"
 
+  local targets scope=""
+  targets=$(semgrep_changed_targets | tr '\n' ' ')
+  if [[ -n "$targets" ]]; then scope=" (changed files vs $BASE_REF)"; else targets="/src"; fi
   # Semgrep exits 1 when it finds something, so the exit code is not the verdict; the report is.
-  # shellcheck disable=SC2046
+  # shellcheck disable=SC2046,SC2086
   docker_run run --rm -e SEMGREP_SEND_METRICS=off -v "${host}:/src" -w /src "$image" \
-    semgrep scan $(semgrep_config_args) --metrics=off --json --output "/src/$SEMGREP_REPORT" /src \
+    semgrep scan $(semgrep_config_args) --metrics=off --json --output "/src/$SEMGREP_REPORT" $targets \
     >>"$LOG_FILE" 2>&1 || true
   [[ -f "$REPO_PATH/$SEMGREP_REPORT" ]] || { mark_fail "semgrep produced no report — see log"; return 0; }
 
@@ -44,7 +66,7 @@ semgrep_check() {
   read -r error warning <<< "$(semgrep_counts)"
   R_REPORT="$SEMGREP_REPORT"
   R_COUNT_JSON="{\"error\":${error:-0},\"warning\":${warning:-0}}"
-  local text="${error:-0} error / ${warning:-0} warning → $SEMGREP_REPORT"
+  local text="${error:-0} error / ${warning:-0} warning${scope} → $SEMGREP_REPORT"
   case "$block_on" in
     WARNING) if (( error + warning > 0 )); then mark_fail "$text"; else mark_pass "0 findings"; fi ;;
     *)       if (( error > 0 )); then mark_fail "$text"; elif (( warning > 0 )); then mark_warn "$text"; else mark_pass "0 findings"; fi ;;

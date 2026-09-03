@@ -1,10 +1,4 @@
-node_modules/
-.git/
-qa-report/
-dist/
-.next/
-coverage/
-build/
-vendor/
-__pycache__/
-tests/fixtures/
+# .trivyignore: vulnerability IDs Trivy must ignore, one per line, with a reason and an expiry date.
+# This file takes CVE / GHSA ids ONLY. Directories are excluded via trivy.skipDirs in qa-gate.config.json.
+# Example:
+# CVE-2024-12345  # no fix upstream, not reachable from our code. Review 2026-12-01

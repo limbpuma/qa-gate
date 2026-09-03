@@ -32,6 +32,7 @@ run_stack_checks() {
     id="$kind"
     if (( ${#stacks[@]} > 1 )); then id="$kind@$stack"; fi
     in_only "$id" || continue
+    if profile_skips_check "$kind"; then run_check "$id" false mark_skip "profile $PROFILE"; continue; fi
     fn=$(stack_fn "$stack" "$kind")
     if [[ -z "$fn" ]]; then
       run_check "$id" false mark_skip "$stack: no $kind check"
@@ -41,9 +42,16 @@ run_stack_checks() {
   done
 }
 
+# True when the active profile lists <id> (or the whole stage) in its skip list.
+profile_skips_check() {
+  node -e 'const s = JSON.parse(process.argv[1] || "[]"); process.exit(s.includes(process.argv[2]) || s.includes(process.argv[3]) ? 0 : 1)' \
+    "$(profile_skips)" "$1" "$STAGE" 2>/dev/null
+}
+
 run_single_check() {
   local id="$1" blocking="$2" fn="$3"; shift 3
   in_only "$id" || return 0
+  if profile_skips_check "$id"; then run_check "$id" false mark_skip "profile $PROFILE"; return 0; fi
   run_check "$id" "$blocking" "$fn" "$@"
 }
 

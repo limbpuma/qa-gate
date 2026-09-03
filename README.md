@@ -29,6 +29,20 @@ once into `~/.claude/scripts/qa-gate/node_modules` on first use; Pa11y comes fro
 
 Set `QA_GATE_HOME` to run a checkout other than `~/.claude/scripts/qa-gate` (the shim honours it).
 
+## Profiles (cost follows the project's maturity)
+
+`profile` in the repo config: `auto` (default) reads `DEPLOY_PROFILE` from `.env` / `infra/.env` / `deploy/.env` and
+falls back to `portfolio-demo`. Each profile lists checks that become SKIP and may override Lighthouse intensity:
+
+| Profile | Skipped | Lighthouse | Typical use |
+|---|---|---|---|
+| `sandbox` | coverage, integration, semgrep, trivy-fs, ai-register, all web checks, build | none | prototypes that may be thrown away: typecheck, lint, unit, audit, secrets only, no Docker |
+| `portfolio-demo` (default) | nuclei, lighthouse | 1 run mobile if enabled elsewhere | demos and portfolio verticals |
+| `mvp-client` | nuclei | 1 run, mobile | a real client evaluating |
+| `production` | nothing | 3 runs, mobile + desktop | paying users |
+
+Promote a project by changing one word. The first summary line shows the active profile.
+
 ## CLI
 
 ```
@@ -53,12 +67,12 @@ Exit codes: `0` PASS · `1` FAIL · `3` usage or internal error. `deploy` prints
 | pre-commit | `lint` | yes | node `lint` script · go vet · ruff |
 | pre-commit | `unit` | yes | node `test` script · go test · pytest |
 | pre-commit | `secrets` | yes | regex scan of staged files (else changed vs base, else all tracked): AWS/GitHub/Slack/Stripe keys, private key blocks, password assignments, JWTs, committed `.env` files. Logs rule + `file:line`, never the value |
-| pr | `typecheck` `lint` `unit` | yes | as above, whole repo |
+| pr | `typecheck` `lint` `unit` | yes | as above, whole repo; for Node, `unit` is SKIP when a coverage script exists (the coverage run executes the same suite) |
 | pr | `coverage` | yes | line coverage of the first stack; FAIL below `coverage.min` or below the ratchet minus `tolerance`; ratchet file only moves up |
 | pr | `integration` | yes | node `test:integration` script; SKIP when undefined |
 | pr | `audit` | yes | `npm/pnpm/yarn audit --audit-level` · `govulncheck` · `pip-audit` (SKIP when the tool is missing) |
-| pr | `semgrep` | yes | Docker `semgrep scan` with `semgrep.rulesets` + the stack's `stackRulesets`; FAIL on ERROR findings, WARN on WARNING findings; report `qa-report/semgrep.json` |
-| pr | `trivy-fs` | yes | Docker `trivy fs` (vuln, misconfig, secret); FAIL on HIGH/CRITICAL; report `qa-report/trivy-fs.json` |
+| pr | `semgrep` | yes | Docker `semgrep scan` with `semgrep.rulesets` + the stack's `stackRulesets`; on a branch only the files changed since the merge-base with the base branch are scanned (`semgrep.changedOnly`, up to 200 files; explicit targets, not `--baseline-commit`, which loses findings on Windows bind mounts), full scan on the base branch; FAIL on ERROR, WARN on WARNING; report `qa-report/semgrep.json` |
+| pr | `trivy-fs` | yes | Docker `trivy fs` (vuln + misconfig; Trivy's secret scanner is off because the gate has its own) with `trivy.skipDirs` (node_modules, .next*, dist, coverage, .lighthouse, …) and `trivy.timeoutMin`; FAIL on HIGH/CRITICAL; report `qa-report/trivy-fs.json` |
 | pr | `ai-register` | yes | when a manifest pulls in an AI SDK (openai, anthropic, langchain, minimax, ollama, …) the repo must have `docs/AI-ACT-REGISTER.md` with the six sections (System, Risikoklasse, Art. 50, Art. 4, Anbieter, Logging); missing → FAIL, `[TODO]` placeholders → WARN, no AI SDK → SKIP. `init` writes the template |
 | pr | `gate-config` | yes | `qa-gate.config.json`, `.semgrepignore`, `.trivyignore` hashed against the base branch; a change is FAIL (WARN with `--allow-config-change`) |
 | build | `docker-build` | yes | `docker build` of the first Dockerfile (`build.dockerfile`, `./Dockerfile`, `apps/*/Dockerfile`) |
@@ -107,15 +121,16 @@ Everything else (tool output, debug) is in the log file, never on stdout.
 
 | Key | Default | Meaning |
 |---|---|---|
+| `profile` / `profiles` | `auto` / four presets | see Profiles above; `auto` reads `DEPLOY_PROFILE` from the env files |
 | `stack` | `"auto"` | `node` · `go` · `python` · `["node","go"]`; auto detects from package.json / go.mod / pyproject.toml |
 | `git.base` | `"auto"` | base branch for `gate-config` and the secrets diff: `main`, else `master` |
-| `commands.node.*` | `"auto"` | `auto` = package.json script of the same name (`typecheck`, `lint`, `test`, `test:coverage`, `test:integration`), run with the package manager of the lockfile, `-r` in pnpm workspaces |
+| `commands.node.*` | `"auto"` | `auto` = package.json script of the same name (`typecheck`, `lint`, `test`, `test:coverage`, `test:integration`, `test:e2e`) at the root, else `pnpm -r run <script>` when a pnpm workspace package (`apps/*`, `packages/*`) defines it |
 | `commands.go.build/unit/vuln` | see template | shell commands run at the repo root |
 | `commands.python.lint/unit`, `commands.python.env` | see template | pytest runs with `-p pytest_cov` because `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1` is set |
 | `coverage.min` / `ratchet` / `tolerance` / `ratchetFile` | 80 / true / 0.2 / `qa-report/coverage-ratchet.json` | commit the ratchet file so the bar persists |
 | `secrets.excludes` | node_modules, .git, qa-report, dist, .next, coverage | path prefixes skipped by the regex scan |
-| `semgrep.image` / `rulesets` / `stackRulesets` / `blockOn` | pinned tag / `p/secrets p/owasp-top-ten` / per stack / `ERROR` | explicit `p/` rulesets only, metrics off, no account |
-| `trivy.image` / `severity` / `ignoreUnfixed` / `scanners` | pinned tag / `HIGH,CRITICAL` / true / `vuln,misconfig,secret` | `.trivyignore` is honoured |
+| `semgrep.image` / `rulesets` / `stackRulesets` / `blockOn` / `changedOnly` | pinned tag / `p/secrets p/owasp-top-ten` / per stack / `ERROR` / true | explicit `p/` rulesets only, metrics off, no account; `changedOnly` scans only the changed files on branches |
+| `trivy.image` / `severity` / `ignoreUnfixed` / `scanners` / `timeoutMin` / `skipDirs` | pinned tag / `HIGH,CRITICAL` / true / `vuln,misconfig` / 15 / build + dependency dirs | `.trivyignore` takes CVE ids only; paths go in `skipDirs` |
 | `audit.level` | `high` | audit threshold for the package manager |
 | `build.dockerfile` / `context` / `target` | auto / `.` / `` | image build inputs |
 | `web.baseUrl` / `paths` / `startCommand` / `readyPath` / `startTimeoutSec` | `""` / `["/"]` / `""` / `/` / 90 | target app for staging + compliance; empty baseUrl → both stages SKIP |

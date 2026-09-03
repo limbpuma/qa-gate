@@ -1,5 +1,53 @@
 {
   "version": 1,
+  "profile": "auto",
+  "profiles": {
+    "sandbox": {
+      "skip": [
+        "coverage",
+        "integration",
+        "semgrep",
+        "trivy-fs",
+        "ai-register",
+        "pa11y",
+        "lighthouse",
+        "e2e",
+        "nuclei",
+        "axe",
+        "legal",
+        "evidence",
+        "docker-build",
+        "trivy-image",
+        "sbom"
+      ]
+    },
+    "portfolio-demo": {
+      "skip": [
+        "nuclei",
+        "lighthouse"
+      ],
+      "lighthouse": {
+        "runs": 1,
+        "formFactors": [
+          "mobile"
+        ]
+      }
+    },
+    "mvp-client": {
+      "skip": [
+        "nuclei"
+      ],
+      "lighthouse": {
+        "runs": 1,
+        "formFactors": [
+          "mobile"
+        ]
+      }
+    },
+    "production": {
+      "skip": []
+    }
+  },
   "stack": "auto",
   "git": {
     "base": "auto"
@@ -65,13 +113,33 @@
         "p/bandit"
       ]
     },
-    "blockOn": "ERROR"
+    "blockOn": "ERROR",
+    "changedOnly": true
   },
   "trivy": {
     "image": "aquasec/trivy:0.58.1",
     "severity": "HIGH,CRITICAL",
     "ignoreUnfixed": true,
-    "scanners": "vuln,misconfig,secret"
+    "scanners": "vuln,misconfig",
+    "timeoutMin": 15,
+    "skipDirs": [
+      "**/node_modules",
+      "**/.git",
+      "**/.next",
+      "**/.next-*",
+      "**/dist",
+      "**/build",
+      "**/coverage",
+      "**/qa-report",
+      "**/.lighthouse",
+      "**/.lighthouseci",
+      "**/vendor",
+      "**/__pycache__",
+      "**/.venv",
+      "**/target",
+      "**/.turbo",
+      "**/.cache"
+    ]
   },
   "audit": {
     "level": "high"
@@ -135,10 +203,6 @@
       "severity": "high,critical"
     }
   },
-  "report": {
-    "dir": "qa-report",
-    "keepLogs": 10
-  },
   "legal": {
     "impressumPath": "/impressum",
     "datenschutzPath": "/datenschutz",
@@ -163,5 +227,9 @@
       "providers": [],
       "registerPath": "docs/AI-ACT-REGISTER.md"
     }
+  },
+  "report": {
+    "dir": "qa-report",
+    "keepLogs": 10
   }
 }

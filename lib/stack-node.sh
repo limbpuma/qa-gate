@@ -18,20 +18,23 @@ node_has_script() {
     "$REPO_PATH/package.json" "$1" 2>/dev/null
 }
 
-# Command for <kind>: config override, else "<pm> run <script>" (recursive in pnpm workspaces).
+# True when any pnpm workspace package (pnpm-workspace.yaml globs) defines <script>.
+node_workspace_has_script() {
+  [[ -f "$REPO_PATH/pnpm-workspace.yaml" ]] || return 1
+  node "$LIB_DIR/json.js" workspace-has-script "$REPO_PATH" "$1" 2>/dev/null
+}
+
+# Command for <kind>: config override, else "<pm> run <script>" at the root, else "pnpm -r run <script>"
+# when a workspace package defines it (monorepos keep their scripts in apps/*).
 node_resolve_cmd() {
   local kind="$1" cmd script pm
   cmd=$(cfg_get ".commands.node.${kind}")
   if [[ -n "$cmd" && "$cmd" != "auto" ]]; then printf '%s' "$cmd"; return 0; fi
   [[ -f "$REPO_PATH/package.json" ]] || return 0
   script=$(node_script_name "$kind")
-  node_has_script "$script" || return 0
   pm=$(detect_node_pm)
-  if [[ "$pm" == "pnpm" && -f "$REPO_PATH/pnpm-workspace.yaml" ]]; then
-    printf 'pnpm -r run %s' "$script"
-  else
-    printf '%s run %s' "$pm" "$script"
-  fi
+  if node_has_script "$script"; then printf '%s run %s' "$pm" "$script"; return 0; fi
+  if node_workspace_has_script "$script"; then printf 'pnpm -r run %s' "$script"; fi
 }
 
 node_run_kind() {
@@ -43,7 +46,11 @@ node_run_kind() {
 
 node_typecheck()   { node_run_kind typecheck; }
 node_lint()        { node_run_kind lint; }
-node_unit()        { node_run_kind unit; }
+# Why: in stage pr the coverage run executes the same suite; running it twice doubles the cost for nothing.
+node_unit() {
+  if [[ "$STAGE" == "pr" && -n "$(node_resolve_cmd coverage)" ]]; then mark_skip "runs inside the coverage check"; return 0; fi
+  node_run_kind unit
+}
 node_integration() { node_run_kind integration; }
 
 # Runs the coverage script and reads total line % from coverage-summary.json.
