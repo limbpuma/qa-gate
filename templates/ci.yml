@@ -1,6 +1,7 @@
 # .github/workflows/qa-gate.yml — runs the global quality gate on every push and PR.
-# No secrets needed: the gate is fetched from the public repo limbpuma/qa-gate, the same code every
-# developer runs locally from ~/.claude/scripts/qa-gate. The workflow never calls an LLM.
+# No secrets needed: the gate is fetched from the public repo limbpuma/qa-gate at a pinned release tag, the same
+# code every developer runs locally from ~/.claude/scripts/qa-gate. The workflow never calls an LLM.
+# Supply chain: every action is pinned to a commit SHA (comment = the tag it was resolved from).
 name: qa-gate
 
 on:
@@ -11,32 +12,39 @@ on:
     - cron: '17 6 1 * *' # monthly live compliance drift check (needs the LIVE_URL repository variable)
   workflow_dispatch:
 
+# Why: the default GITHUB_TOKEN can write to the repo; the gate only reads the checkout and uploads artifacts.
+permissions:
+  contents: read
+
+env:
+  QA_GATE_VERSION: v0.2.0
+
 jobs:
   gate:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0 # gate-config and the Semgrep changed-files scope compare against the base branch
 
-      - name: Fetch qa-gate
+      - name: Fetch qa-gate (pinned release)
         run: |
-          git clone --depth 1 https://github.com/limbpuma/qa-gate.git "$HOME/qa-gate"
+          git clone --depth 1 --branch "$QA_GATE_VERSION" https://github.com/limbpuma/qa-gate.git "$HOME/qa-gate"
           echo "QA_GATE_HOME=$HOME/qa-gate" >> "$GITHUB_ENV"
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         if: hashFiles('pnpm-lock.yaml') != ''
         with:
           version: 10
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         if: hashFiles('go.mod') != ''
         with:
           go-version-file: go.mod
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         if: hashFiles('pyproject.toml') != ''
         with:
           python-version: '3.12'
@@ -57,7 +65,7 @@ jobs:
 
       - name: Upload gate reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: qa-report
           path: |
@@ -71,21 +79,25 @@ jobs:
     if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && vars.LIVE_URL != ''
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      LIVE_URL: ${{ vars.LIVE_URL }} # passed through env, never interpolated into a shell line
     steps:
-      - uses: actions/checkout@v4
-      - name: Fetch qa-gate + browser toolchain
-        run: |
-          git clone --depth 1 https://github.com/limbpuma/qa-gate.git "$HOME/qa-gate"
-          cd "$HOME/qa-gate" && npm install --silent --no-audit --no-fund && npx playwright install --with-deps chromium
-          echo "QA_GATE_HOME=$HOME/qa-gate" >> "$GITHUB_ENV"
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
+      - name: Fetch qa-gate (pinned release) + browser toolchain
+        run: |
+          git clone --depth 1 --branch "$QA_GATE_VERSION" https://github.com/limbpuma/qa-gate.git "$HOME/qa-gate"
+          cd "$HOME/qa-gate" && npm install --silent --no-audit --no-fund && npx playwright install --with-deps chromium
+          echo "QA_GATE_HOME=$HOME/qa-gate" >> "$GITHUB_ENV"
       - name: Compliance against the live site
-        run: bash "$QA_GATE_HOME/qa-gate.sh" compliance --repo "$GITHUB_WORKSPACE" --base-url "${{ vars.LIVE_URL }}"
+        run: |
+          case "$LIVE_URL" in https://*) ;; *) echo "LIVE_URL must be an https URL"; exit 1 ;; esac
+          bash "$QA_GATE_HOME/qa-gate.sh" compliance --repo "$GITHUB_WORKSPACE" --base-url "$LIVE_URL"
       - name: Upload evidence bundle
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: compliance-evidence
           path: |
