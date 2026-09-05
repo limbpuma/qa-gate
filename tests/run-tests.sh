@@ -225,7 +225,7 @@ test_web_compliance_blocks_bad_site() {
     const j = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
     const f = (id) => j.checks.find((c) => c.id === id);
     const failing = ["consent.google-fonts", "consent.banner", "headers.security", "ai.disclosure", "ai.content-label", "ai.datenschutz-provider",
-      "impressum.fields", "vsbg.odr-link", "consent.withdrawal-link"].filter((id) => f(id).status !== "FAIL");
+      "impressum.fields", "vsbg.odr-link", "consent.withdrawal-link", "datenschutz.content", "datenschutz.third-country"].filter((id) => f(id).status !== "FAIL");
     if (failing.length) { process.stdout.write("not FAIL: " + failing.join(", ")); process.exit(1); }
   ' "$dest/qa-report/compliance-scan.json" || { fail "$label" "expected FAIL on fonts, banner, headers, AI, Impressum fields, ODR link, withdrawal link"; return; }
   pass "$label"

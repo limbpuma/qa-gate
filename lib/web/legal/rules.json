@@ -440,6 +440,43 @@
         "sector"
       ],
       "source": "https://www.gesetze-im-internet.de/heilmwerbg/__3.html"
+    },
+    {
+      "id": "datenschutz.content",
+      "check": "datenschutzContent",
+      "law": "DSGVO Art. 13 Abs. 1-2 (required sections of the Datenschutzerklärung)",
+      "since": "2018-05-25",
+      "profiles": [
+        "portfolio-demo",
+        "mvp-client",
+        "production"
+      ],
+      "requires": [],
+      "source": "https://eur-lex.europa.eu/eli/reg/2016/679/oj"
+    },
+    {
+      "id": "datenschutz.dsb",
+      "check": "datenschutzDsb",
+      "law": "DSGVO Art. 37, BDSG § 38 (Datenschutzbeauftragte:r)",
+      "since": "2018-05-25",
+      "profiles": [
+        "mvp-client",
+        "production"
+      ],
+      "requires": [],
+      "source": "https://www.gesetze-im-internet.de/bdsg_2018/__38.html"
+    },
+    {
+      "id": "datenschutz.third-country",
+      "check": "datenschutzThirdCountry",
+      "law": "DSGVO Art. 13 Abs. 1 lit. f, Art. 44 ff. (Drittlandtransfer, DPF/SCC)",
+      "since": "2018-05-25",
+      "profiles": [
+        "mvp-client",
+        "production"
+      ],
+      "requires": [],
+      "source": "https://eur-lex.europa.eu/eli/reg/2016/679/oj"
     }
   ]
 }

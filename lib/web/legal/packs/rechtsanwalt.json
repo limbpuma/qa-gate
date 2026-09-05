@@ -1,0 +1,83 @@
+{
+  "sector": "rechtsanwalt",
+  "title": "Rechtsanwalt / Kanzlei",
+  "reviewedAt": "2026-09-05",
+  "variants": ["Einzelanwalt/-anwältin", "Fachanwalt (FAO § 1, BRAO § 43c)", "Berufsausübungsgesellschaft: PartG mbB, Rechtsanwalts-GmbH (BRAO § 59b ff., § 59n)"],
+  "sources": [
+    "https://www.gesetze-im-internet.de/ddg/__5.html",
+    "https://www.gesetze-im-internet.de/dlinfov/__2.html",
+    "https://www.gesetze-im-internet.de/brao/__12.html",
+    "https://www.gesetze-im-internet.de/brao/__43a.html",
+    "https://www.gesetze-im-internet.de/brao/__43b.html",
+    "https://www.gesetze-im-internet.de/brao/__43c.html",
+    "https://www.gesetze-im-internet.de/brao/__51.html",
+    "https://www.gesetze-im-internet.de/brao/__59b.html",
+    "https://www.gesetze-im-internet.de/brao/__59n.html",
+    "https://www.gesetze-im-internet.de/brao/__191f.html",
+    "https://www.gesetze-im-internet.de/rvg/__3a.html",
+    "https://www.gesetze-im-internet.de/rvg/__34.html",
+    "https://www.gesetze-im-internet.de/vsbg/__36.html",
+    "https://www.gesetze-im-internet.de/bgb/__312g.html",
+    "https://www.gesetze-im-internet.de/bgb/__356.html",
+    "https://www.gesetze-im-internet.de/stgb/__203.html",
+    "https://www.brak.de/anwaltschaft/berufsrecht/allgemeine-informationen/",
+    "https://www.brak.de/fileadmin/02_fuer_anwaelte/berufsrecht/033-BORA_Stand_01.12.2025.pdf",
+    "https://www.brak.de/fileadmin/02_fuer_anwaelte/berufsrecht/028-FAO_Stand_01.12.2025.pdf",
+    "https://www.rak-muenchen.de/rechtsanwaelte/berufsrecht/informationspflichten/",
+    "https://www.schlichtungsstelle-der-rechtsanwaltschaft.de/hinweise-nach-dem-verbraucherstreitbeilegungsgesetz-vsbg/",
+    "https://anwaltsblatt.anwaltverein.de/de/themen/kanzlei-praxis/neue-adresse-der-schlichtungsstelle-anwaelte-muessen-ihre-webseite-aktualisieren",
+    "https://www.lto.de/karriere/im-job/stories/detail/bgh-urteil-izr5313-anwaltswerbung-fachanwalt-spezialist-berufsrecht"
+  ],
+  "impressumPatterns": [
+    { "id": "berufsbezeichnung", "regex": "Rechtsanw(ä|ae|a)lt(in|innen|e)?\\b", "law": "DDG § 5 Abs. 1 Nr. 5 lit. b; BRAO § 12 Abs. 4", "severity": "FAIL", "note": "Gesetzliche Berufsbezeichnung wörtlich: 'Rechtsanwältin' / 'Rechtsanwalt' (nach Zulassung, § 12 Abs. 4 BRAO). 'Anwalt', 'Jurist' oder 'Kanzlei' allein genügen nicht." },
+    { "id": "verleihungsstaat", "regex": "Bundesrepublik\\s+Deutschland|verliehen\\s+(in|durch)|Verleihungsstaat|Zulassungsstaat", "law": "DDG § 5 Abs. 1 Nr. 5 lit. b", "severity": "FAIL", "note": "Staat, in dem die Berufsbezeichnung verliehen wurde: 'verliehen in der Bundesrepublik Deutschland'. 'Deutschland' nur in der Postanschrift ist keine Zuordnung." },
+    { "id": "kammer", "regex": "Rechtsanwaltskammer|\\bRAK\\b", "law": "DDG § 5 Abs. 1 Nr. 5 lit. a und Nr. 3; BRAO § 12 (Zulassung durch die Kammer)", "severity": "FAIL", "note": "Zuständige Rechtsanwaltskammer mit Name und Anschrift — sie ist Kammer (Nr. 5a) und Aufsichtsbehörde (Nr. 3). RAK München verlangt 'vollständige Kontaktdaten'. Adressvollständigkeit manuell prüfen." },
+    { "id": "berufsrecht-brao", "regex": "Bundesrechtsanwaltsordnung|\\bBRAO\\b", "law": "DDG § 5 Abs. 1 Nr. 5 lit. c", "severity": "FAIL", "note": "Bezeichnung der berufsrechtlichen Regelungen: mindestens die BRAO muss genannt sein, plus Angabe, wie zugänglich (Link, siehe requiredLinks)." },
+    { "id": "berufsrecht-weitere", "regex": "Berufsordnung\\s+(f(ü|ue)r|der)\\s+Rechtsanw|\\bBORA\\b|Fachanw(ä|ae|a)lt(in)?(s|-\\s?und\\s+Fachanwalts)?ordnung|\\bFAO\\b|Rechtsanwaltsverg(ü|ue)tungsgesetz|\\bRVG\\b|\\bCCBE\\b", "law": "DDG § 5 Abs. 1 Nr. 5 lit. c; RAK München: 'BRAO, BORA, RVG, FAO, CCBE'", "severity": "WARN", "note": "Kammer-Praxis: BRAO, BORA (Fassung 01.12.2025), FAO (01.12.2025), RVG und CCBE-Berufsregeln nennen. Regex fängt nur, ob mindestens eine Zusatzquelle erscheint; Vollständigkeit manuell." },
+    { "id": "haftpflicht", "regex": "Berufshaftpflicht|Verm(ö|oe)gensschaden-?haftpflicht|Haftpflichtversicher", "law": "DL-InfoV § 2 Abs. 1 Nr. 11; BRAO § 51 Abs. 1 (Einzelanwalt), § 59n (Berufsausübungsgesellschaft); BORA § 10 Abs. 1", "severity": "FAIL", "note": "Pflichtversicherung besteht immer (BRAO § 51 / § 59n), daher greift die 'falls'-Klausel der DL-InfoV stets: Name und Anschrift des Versicherers. BORA § 10 verlangt die DL-InfoV-Angaben vor Mandatsvertrag; auf der Website, wenn Mandate dort angebahnt werden (Kontakt-/Mandatsformular)." },
+    { "id": "haftpflicht-geltungsbereich", "regex": "r(ä|ae)umliche[rn]?\\s+Geltungsbereich|Geltungsbereich\\s+(der|des)\\s+(Versicherung|Versicherungsschutz)|weltweit|(EU|EWR|Europ(ä|ae)ische[rn]?\\s+Union)", "law": "DL-InfoV § 2 Abs. 1 Nr. 11", "severity": "WARN", "note": "Räumlicher Geltungsbereich ist ausdrücklich Pflichtangabe; WARN, weil DL-InfoV § 2 Abs. 2 alternative Bereitstellung (Mandatsunterlagen) zulässt. Im Impressum begonnen → dort vollständig." },
+    { "id": "ustid", "regex": "USt-?\\s?Id(Nr|ent)|Umsatzsteuer-?\\s?Identifikationsnummer|\\bDE\\s?\\d{9}\\b|Wirtschafts-?Identifikationsnummer|W-?IdNr", "law": "DDG § 5 Abs. 1 Nr. 6 (§ 27a UStG / § 139c AO)", "severity": "WARN", "note": "Nur Pflicht, wenn USt-IdNr oder W-IdNr vorhanden; Kanzleien haben sie praktisch immer. Steuernummer ist kein Ersatz." },
+    { "id": "register", "regex": "Handelsregister|Partnerschaftsregister|\\bHRB\\s?\\d|\\bHRA\\s?\\d|\\bPR\\s?\\d", "law": "DDG § 5 Abs. 1 Nr. 4; BRAO § 59b (zulässige Rechtsformen)", "severity": "WARN", "note": "Nur für Berufsausübungsgesellschaften (PartG mbB → Partnerschaftsregister; Rechtsanwalts-GmbH/AG → Handelsregister): Register + Nummer + Registergericht. Einzelkanzlei: Pattern ignorieren." }
+  ],
+  "statements": [
+    { "id": "vsbg-schlichtungsstelle", "regex": "Schlichtungsstelle\\s+der\\s+Rechtsanwaltschaft|Verbraucherschlichtungsstelle|Streitbeilegungsverfahren|Streitbeilegung\\s+vor\\s+einer", "pages": ["impressum", "agb", "any"], "law": "VSBG § 36 Abs. 1–2 (Ausnahme Abs. 3: ≤ 10 Beschäftigte); BRAO § 191f Abs. 1", "severity": "WARN", "note": "Erklärung, ob Teilnahme an Verbraucherschlichtung bereit/verpflichtet, mit Anschrift + Website der Stelle: Schlichtungsstelle der Rechtsanwaltschaft, Rauchstraße 26, 10787 Berlin, www.schlichtungsstelle-der-rechtsanwaltschaft.de (Schlichtung unentgeltlich, bis 15.000 € statthaft, § 191f Abs. 5). > 10 Beschäftigte → Pflicht; RAK München empfiehlt Hinweis auch auf Kammer-Vermittlung (§ 73 Abs. 2 Nr. 3 BRAO → pruefen)." },
+    { "id": "widerruf-verbrauchermandat", "regex": "Widerrufsrecht|Widerrufsbelehrung|Widerrufsformular", "pages": ["agb", "any"], "law": "BGB § 312g Abs. 1 i. V. m. § 355; § 356 Abs. 4 (Erlöschen 12 Monate + 14 Tage) und Abs. 5 (Dienstleistung)", "severity": "WARN", "note": "Nur wenn Mandate mit Verbrauchern online/fernmündlich geschlossen werden (Online-Mandat, Fernabsatz): 14 Tage Widerruf, Belehrung + Muster-Widerrufsformular + Zustimmung zum vorzeitigen Beginn. Anwaltsverträge stehen nicht in der Ausnahmeliste § 312g Abs. 2. Reines Kontaktformular ohne Vertragsschluss löst keine Pflicht aus." },
+    { "id": "verguetung-hinweis", "regex": "Rechtsanwaltsverg(ü|ue)tungsgesetz|\\bRVG\\b|Verg(ü|ue)tungsvereinbarung|Erstberatung|Beratungsgeb(ü|ue)hr", "pages": ["any"], "law": "RVG § 3a Abs. 1 (Textform, Bezeichnung, Kostenerstattungshinweis); RVG § 34 Abs. 1 (Erstberatung Verbraucher max. 190 €, Beratung max. 250 €)", "severity": "WARN", "note": "Keine Website-Pflicht zur Preisliste, aber Honorartransparenz ist Best-Practice: RVG nennen; Online-Erstberatungsangebote müssen mit § 34 RVG-Kappung vereinbar sein; Vergütungsvereinbarungen nur in Textform, als solche bezeichnet, getrennt von Vollmacht." },
+    { "id": "kontaktformular-rechtsgrundlage", "regex": "(Kontaktformular|Kontaktanfrage|Kontaktaufnahme|Mandatsanfrage)[\\s\\S]{0,800}?(Art\\.?\\s*6\\s*Abs\\.?\\s*1|Rechtsgrundlage)", "pages": ["any"], "law": "DSGVO Art. 13 Abs. 1 lit. c; BRAO § 43a Abs. 2 (Verschwiegenheit); BORA § 2 Abs. 2 (Stand der Technik, Einwilligung bei riskanten Kanälen); StGB § 203 Abs. 1 Nr. 3", "severity": "WARN", "note": "Datenschutzerklärung muss Zweck + Rechtsgrundlage der Formularverarbeitung nennen (Art. 6 Abs. 1 lit. b Anbahnung / lit. f). Mandatsdaten sind Berufsgeheimnis: Formular soll vor Übermittlung vertraulicher Details warnen oder verschlüsselten Kanal bieten." }
+  ],
+  "requiredLinks": [
+    { "id": "berufsrecht-zugang", "hrefRegex": "brak\\.de|gesetze-im-internet\\.de/(brao|rvg|eurag)", "law": "DDG § 5 Abs. 1 Nr. 5 lit. c; RAK München: Hinweis auf www.brak.de, Rubrik Berufsrecht", "severity": "WARN", "note": "'Angabe, wie die Regelungen zugänglich sind': Link auf www.brak.de/anwaltschaft/berufsrecht/allgemeine-informationen/ (BRAO, BORA-PDF, FAO-PDF, CCBE-PDF, RVG, EuRAG) oder gesetze-im-internet.de. Textnennung ohne Link ist vertretbar, daher WARN." }
+  ],
+  "forbiddenWords": [
+    { "id": "odr-plattform-obsolet", "regex": "ec\\.europa\\.eu/consumers/odr|OS-Plattform|Online-Streitbeilegung\\s+der\\s+(EU|Europ(ä|ae)ischen\\s+Kommission)", "pages": ["any"], "law": "VO (EU) 2024/3228 (Aufhebung VO (EU) 524/2013; Plattform eingestellt 20.07.2025)", "severity": "WARN", "note": "Veralteter OS-Link/OS-Hinweis; entfernen. VSBG-§-36-Hinweis bleibt davon unberührt. Irreführungsrisiko nach UWG (→ pruefen)." },
+    { "id": "werbung-erfolgsversprechen", "regex": "Erfolgsgarantie|garantier\\w*\\s+(Erfolg|Freispruch|Sieg|Gewinn|Schadensersatz|Schmerzensgeld)|(Erfolg|Freispruch|Sieg)\\s+garantiert|100\\s?%\\s+(Erfolg|Gewinn)|(beste[rs]?|g(ü|ue)nstigste[rs]?|billigste[rs]?|erfolgreichste[rs]?)\\s+(Rechts)?anw(a|ä|ae)lt|Nr\\.?\\s?1\\s+(Kanzlei|Anwalt|Rechtsanwalt)|Testsieger", "pages": ["any"], "law": "BRAO § 43b (sachlich in Form und Inhalt); BORA § 6 Abs. 1 (Fassung 01.12.2025: nicht unsachlich, unlauter, irreführend)", "severity": "WARN", "note": "Erfolgsgarantien, Superlative und Alleinstellungsbehauptungen ohne Beleg sind berufswidrig/wettbewerbswidrig. Prüfen auch Bewertungen und Mandantenzitate: Werbung mit Mandaten nur mit ausdrücklicher Einwilligung (BORA § 6 Abs. 2)." },
+    { "id": "spezialist-ohne-nachweis", "regex": "(Spezialist(in)?|Experte|Expertin|Spezialkanzlei)\\s+(f(ü|ue)r|im|in)\\s+(Familien|Straf|Arbeits|Verkehrs|Miet|Erb|Sozial|Steuer|Verwaltungs|Versicherungs|Medizin|Bau|Insolvenz|Migrations|Vergabe|Sport|Handels|Gesellschafts|Urheber|Medien|Agrar|Bank)\\w*recht", "pages": ["any"], "law": "BORA § 7 Abs. 1–2 (qualifizierende Zusätze: theoretische Kenntnisse + erhebliche Tätigkeit; keine Verwechslung mit Fachanwaltschaften); BGH 24.07.2014 – I ZR 53/13 ('Spezialist für Familienrecht')", "severity": "WARN", "note": "'Spezialist/Experte für <Fachanwaltsgebiet>' ist nur zulässig, wenn die Kenntnisse denen eines Fachanwalts entsprechen; Darlegungs- und Beweislast trägt der Anwalt. WARN, weil ein echter Fachanwalt den Zusatz führen darf." },
+    { "id": "fachanwalt-nicht-verleihbar", "regex": "Fachanw(ä|ae|a)lt(in)?\\s+f(ü|ue)r\\s+(?!(Verwaltungs|Steuer|Arbeits|Sozial|Familien|Straf|Versicherungs|Medizin|Verkehrs|Erb|Agrar|Vergabe|Migrations|Sport|Informationstechnologie|IT-)recht|Insolvenz(-?\\s?und\\s+Sanierungs)?recht|Miet-?\\s?und\\s+Wohnungseigentumsrecht|Bau-?\\s?und\\s+Architektenrecht|Transport-?\\s?und\\s+Speditionsrecht|gewerblichen\\s+Rechtsschutz|Handels-?\\s?und\\s+Gesellschaftsrecht|Urheber-?\\s?und\\s+Medienrecht|Bank-?\\s?und\\s+Kapitalmarktrecht|Internationales\\s+Wirtschaftsrecht)", "pages": ["any"], "law": "BRAO § 43c Abs. 1 (Verleihung durch die RAK, max. drei Gebiete); FAO § 1 (Fassung 01.12.2025: 24 Bezeichnungen)", "severity": "WARN", "note": "Treffer = 'Fachanwalt für X' mit einem Gebiet, das die FAO nicht kennt (z. B. 'Fachanwalt für Internetrecht', 'für Mietrecht' allein). 'IT-Recht' als Kurzform toleriert (offiziell: Informationstechnologierecht). Tatsächliche Verleihung ist nur manuell/Kammer-Verzeichnis prüfbar." }
+  ],
+  "manual": [
+    "Kammer-Anschrift vollständig und die richtige RAK (Bezirk der Kanzlei, ggf. jede Kammer bei mehreren Standorten) — Regex prüft nur das Wort.",
+    "Versicherer-Name + Anschrift real und aktuell; Deckung ≥ 250.000 € je Versicherungsfall (BRAO § 51 Abs. 4), Berufsausübungsgesellschaften nach § 59n höher.",
+    "Fachanwaltstitel: jede genannte Bezeichnung gegen die Verleihung durch die RAK (Rechtsanwaltsverzeichnis, BRAO § 31) und die Höchstzahl drei (§ 43c Abs. 1) prüfen; Titel nur bei der Person, nicht als Kanzlei-Attribut.",
+    "Berufsausübungsgesellschaft: persönlich haftende Gesellschafter nennen oder auf Rechtsanwaltsverzeichnis/Register verweisen (BORA § 10 Abs. 1 S. 2–3); ausgeschiedene Berufsträger nur mit Ausscheidenshinweis (BORA § 8 Abs. 3); Fremdberufe mit Berufsbezeichnung (BORA § 8 Abs. 2); Kurzbezeichnung einheitlich (BORA § 9).",
+    "Vergütungsvereinbarungen: Textform, als solche bezeichnet, getrennt von anderen Vereinbarungen, nicht in der Vollmacht, mit Kostenerstattungshinweis (RVG § 3a Abs. 1); Erstberatung Verbraucher ≤ 190 € ohne Vereinbarung (RVG § 34).",
+    "Online-Mandatsabschluss mit Verbrauchern: Widerrufsbelehrung + Muster-Widerrufsformular + Zustimmung zum vorzeitigen Beginn; sonst Frist 12 Monate + 14 Tage (BGB § 356 Abs. 4).",
+    "beA: besonderes elektronisches Anwaltspostfach ist Pflicht-Kanal gegenüber Gerichten, gehört aber nicht ins Impressum; auf der Website kein beA-Postfach als Mandantenkanal bewerben.",
+    "Kontakt-/Mandatsformular: TLS, keine Pflichtfelder für Gegner/Sachverhalt, Warnhinweis vor vertraulichen Details, Dokumenten-Upload nur über verschlüsseltes Mandantenportal (BORA § 2 Abs. 2, BRAO § 43a Abs. 2, StGB § 203).",
+    "Datenschutzerklärung: Auftragsverarbeiter (Kanzleisoftware, Hosting, E-Mail) mit AVV; Löschfristen Handakten (BRAO § 50 → pruefen); Art. 13/14 vollständig; Mandanten-Bewertungen/Testimonials nur mit ausdrücklicher Einwilligung (BORA § 6 Abs. 2).",
+    "Werbeauftritt gesamt: Google-Ads, Bewertungsportale, Videos, Social Media auf Sachlichkeit (§ 43b BRAO, BORA § 6) und Spezialisten-Claims (BORA § 7) prüfen — kein Regex deckt Bild/Video/Anzeigen.",
+    "Mitarbeiterzahl per 31.12. Vorjahr feststellen: > 10 → VSBG-§-36-Erklärung mit Anschrift + Website der Schlichtungsstelle Pflicht."
+  ],
+  "pruefen": [
+    "Spannung BRAO § 43b ('nicht auf die Erteilung eines Auftrags im Einzelfall gerichtet') vs. BORA § 6 Abs. 1 S. 2 (Fassung 01.12.2025: 'Werbung um ein einzelnes Mandat zulässig') — Reichweite der neuen BORA-Regel und ob § 43b BRAO 2025/2026 novelliert wurde, klären.",
+    "BORA-Änderungen zum 01.12.2025 (§§ 6, 8, 10; Beschluss Satzungsversammlung 26.05.2025) laut BRAK-Newsletter; Volltext der Beschlüsse in BRAK-Mitteilungen gegenlesen.",
+    "Aufsichtsbehörde: Kammer als Aufsicht nach BRAO § 73 Abs. 2 (Nr. 4?) und Vermittlung § 73 Abs. 2 Nr. 3 nur über § 191f Abs. 5 und RAK München referenziert, Absatz-Nummern nicht am Statuttext verifiziert.",
+    "PartG mbB: Zusatz 'mit beschränkter Berufshaftung' und Mindestversicherung (PartGG § 8 Abs. 4; BRAO § 59n/§ 59o?) nicht aus Primärquelle verifiziert; BRAK-Merkblatt PartGmbB ist Stand 2014.",
+    "Rechtsanwalts-GmbH / Berufsausübungsgesellschaft: Zulassungspflicht und Namensführung ('Rechtsanwaltsgesellschaft'?) nach BRAO §§ 59c ff. (Reform 2022) nicht im Detail geprüft; Impressum-Zusatz 'zugelassen durch RAK X' klären.",
+    "DL-InfoV auf der Website: RAK München sieht die Website-Pflicht v. a. bei Mandatsanbahnung online; Rechtsprechung uneinheitlich (OLG Hamm: Pflicht im Impressum; LG Dortmund 3 O 102/13: Bagatelle) — FAIL-Einstufung mit Anwalt abstimmen.",
+    "OS-Plattform-Resthinweis: Einordnung als irreführende geschäftliche Handlung § 5 / § 5a UWG — Abmahnrisiko-Bewertung.",
+    "Widerruf: kein Ausschluss für Anwaltsverträge in § 312g Abs. 2 gefunden; Ausnahmen § 312 Abs. 2 BGB (u. a. notariell beurkundete Verträge) gegenprüfen; Anwendung auf Beratungshotlines/Online-Erstberatung.",
+    "Handakten-Aufbewahrung (BRAO § 50 Abs. 1: 6 Jahre?) für Löschfristen in der Datenschutzerklärung — Paragraf und Frist verifizieren.",
+    "Fachanwalt-Regex toleriert 'IT-Recht' als Kurzform; ob Kammern die Kurzform im Außenauftritt akzeptieren, prüfen (offiziell 'Informationstechnologierecht', FAO § 1).",
+    "CCBE-Berufsregeln: BRAK-PDF Stand 2026-01 verlinkt; ob Nennung im Impressum Pflicht (Kammer-Empfehlung) oder nur bei grenzüberschreitender Tätigkeit nötig ist, klären."
+  ]
+}
