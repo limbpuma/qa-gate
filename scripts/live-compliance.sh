@@ -2,7 +2,7 @@
 # scripts/live-compliance.sh — run the compliance stage against LIVE sites listed in a registry (drift check).
 # Usage: live-compliance.sh [registry.json]   default: ~/.claude/qa-gate/live-sites.json
 # Registry: [ { "repo": "/c/Users/me/proj/softki-de", "url": "https://softki.de", "paths": ["/", "/preise"] } ]
-# Scheduled monthly by schtasks (Windows) or cron (Linux); no LLM involved. Evidence lands in each repo's qa-report/.
+# Scheduled every 4 weeks by schtasks (Windows) or cron (Linux); no LLM involved. Evidence lands in each repo's qa-report/.
 set -euo pipefail
 
 QA_GATE_HOME="${QA_GATE_HOME:-$HOME/.claude/scripts/qa-gate}"

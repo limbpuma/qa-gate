@@ -179,10 +179,10 @@ planted AWS key and command injection for Semgrep. The node fixture installs its
 - `qa-gate.sh compliance --base-url https://example.de` audits the site people actually see. `/ship` runs it after
   a deploy on mvp-client/production profiles and commits the evidence bundle (`Target: … (live)`).
 - `scripts/live-compliance.sh [registry]` runs that for every entry of `~/.claude/qa-gate/live-sites.json`
-  (`[{ "repo", "url", "paths" }]`). Scheduled weekly on Windows as task `QaGate-LiveCompliance`; repos on GitHub get
+  (`[{ "repo", "url", "paths" }]`). Scheduled every 4 weeks on Windows as task `QaGate-LiveCompliance`; repos on GitHub get
   the same from the workflow's monthly `schedule` once the `LIVE_URL` repository variable exists.
 - `scripts/legal-watch.sh` fetches the `source` page of every rule in `lib/web/legal/rules.json`, normalises and
-  hashes it, and writes `~/.claude/qa-gate/legal-watch/pending/<rule>.diff` when it changed. Scheduled weekly as
+  hashes it, and writes `~/.claude/qa-gate/legal-watch/pending/<rule>.diff` when it changed. Scheduled every 4 weeks as
   `QaGate-LegalWatch`. The Claude Code command `/legal-review` reads only the pending diffs, drafts the rule change
   on a branch of this repo with the source quoted and opens a PR; merging is a human decision. `rules.json`
   carries `reviewedAt` / `reviewEveryMonths`; past the date the gate prints `WARN legal.rules-stale`.

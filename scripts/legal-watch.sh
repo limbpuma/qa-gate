@@ -2,7 +2,7 @@
 # scripts/legal-watch.sh — detect changes in the legal sources behind lib/web/legal/rules.json. No LLM, no tokens.
 # For every rule source URL: fetch, strip markup and whitespace, hash. A changed hash writes a diff into
 # ~/.claude/qa-gate/legal-watch/pending/<rule>.diff for the monthly review (/legal-review), which is the only
-# step that spends tokens — and only when something changed. Scheduled weekly (schtasks / cron).
+# step that spends tokens — and only when something changed. Scheduled every 4 weeks (schtasks / cron).
 set -euo pipefail
 
 QA_GATE_HOME="${QA_GATE_HOME:-$HOME/.claude/scripts/qa-gate}"
