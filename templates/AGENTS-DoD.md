@@ -16,4 +16,4 @@ Required local steps before pushing or opening a PR:
 
 Exit codes: `0` PASS · `1` FAIL · `3` usage/internal error. Report goes to `qa-report/gate-<stage>-<timestamp>.json`
 and `qa-report/_logs/<stage>-<timestamp>.log`. Summary on stdout is the contract — never write to stdout
-outside the summary block. See `scripts/qa-gate/README.md` for the full check table and config reference.
+outside the summary block. Full check table and config reference: https://github.com/limbpuma/qa-gate/blob/main/docs/REFERENCE.md
