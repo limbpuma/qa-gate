@@ -26,6 +26,16 @@ It is written once per machine and used by everyone who touches a repo: you at t
   says it is a machine. Those checks are here, with the law behind each one.
 - Prototypes should not pay for production-grade checks. Profiles scale the cost to the project's maturity.
 
+### Why Bash and Node, not Go or Rust
+
+The gate is glue, not compute: it decides what to run, reads JSON and writes a verdict. In a typical `pr` run the
+gate itself accounts for about one second; Semgrep, Trivy, the project's own tests and the browser checks are the
+other thirty. Bash and Node are already on every developer machine, every GitHub runner and every server, so
+there is nothing to install, sign or distribute per operating system. The legal layer runs in a real browser through
+Playwright and axe-core, which are JavaScript, so half the code is JavaScript because the browser world is. And a
+script in Bash and JavaScript stays readable and patchable by the cheap coding agents that run it. A compiled
+binary would make sense the day the gate is shipped as a product to third parties; it would not make a run faster.
+
 ## Quick start
 
 ```bash
