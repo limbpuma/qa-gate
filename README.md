@@ -1,54 +1,165 @@
-# qa-gate — one deterministic quality gate for every repo
+# qa-gate
 
-`qa-gate.sh` runs the same checks on any Node, Go or Python repo, prints a summary block of at most
-25 lines, writes a JSON verdict and exits `0` (PASS) or `1` (FAIL). It lives once per machine
-(`~/.claude/scripts/qa-gate/`); a repo only carries `qa-gate.config.json`, a 3-line shim and a pre-commit hook.
-Claude Code skills, opencode agents and CI all run the script and read only its summary. No LLM is involved.
+**One quality gate for every repo. Deterministic. German-market compliance built in. No LLM in the loop.**
 
-Public repo: https://github.com/limbpuma/qa-gate (CI clones it without any token). Install on a machine:
+`qa-gate` is a Bash tool that reviews a software project the same way every time: tests, secrets, known
+vulnerabilities, accessibility, performance, and the legal duties a website in Germany has to meet (Impressum,
+Datenschutz, cookies, BFSG accessibility, AI Act, and the extra rules of regulated professions such as tax
+advisors, insurance brokers, doctors or craft businesses). It answers with a short verdict, PASS or FAIL, and
+a file that says exactly why.
 
-```bash
-git clone https://github.com/limbpuma/qa-gate.git ~/.claude/scripts/qa-gate
+It is written once per machine and used by everyone who touches a repo: you at the terminal, coding agents
+(Claude Code, OpenCode/MiniMax), and GitHub Actions. They all run the same script and read the same answer.
+
 ```
-Inside claude-stack the directory is a git subtree of that repo (`git subtree push --prefix=scripts/qa-gate qa-gate main`).
+   your repo ──▶ qa-gate ──▶ PASS  (carry on)
+                    │
+                    └──────▶ FAIL  (stops, names the line that failed)
+```
 
-Plan and rationale: `~/Documents/AI_FIRST/proyectos_resources/Core_DevOps_Engineer/docs/QA_PIPELINE_PLAN.md`.
+## Why it exists
+
+- Agents say "tests are green" in prose. A gate gives you a JSON you can check instead of a story you have to trust.
+- Prompt-based checks cost tokens and change with the model. A script costs nothing and never changes its mind.
+- In Germany a website is not "done" when it works. It is done when the Impressum has the right fields for the
+  profession, nothing loads before consent, prices include VAT, the accessibility statement exists, and the chatbot
+  says it is a machine. Those checks are here, with the law behind each one.
+- Prototypes should not pay for production-grade checks. Profiles scale the cost to the project's maturity.
 
 ## Quick start
 
 ```bash
-# once per repo (idempotent): config, shim, ignore files, pre-commit hook, AGENTS.md DoD block
-bash ~/.claude/scripts/qa-gate/qa-gate.sh init          # add --web to seed web.urls for F0b
+# install once per machine
+git clone https://github.com/limbpuma/qa-gate.git ~/.claude/scripts/qa-gate
+
+# activate in a repo (idempotent): config, 3-line shim, pre-commit hook, ignore files, AGENTS.md block
+cd your-repo && bash ~/.claude/scripts/qa-gate/qa-gate.sh init
+
+# let an AI propose the repo's configuration (profile, web URL, legal sector, features) — review, then commit
+bash scripts/qa-gate.sh suggest
 
 # daily
-bash scripts/qa-gate.sh pre-commit      # seconds, no Docker
+bash scripts/qa-gate.sh pre-commit      # seconds, no Docker — the git hook runs this for you
 bash scripts/qa-gate.sh pr              # before merging a branch (Docker for Semgrep + Trivy)
-bash scripts/qa-gate.sh build           # image build + Trivy image + SBOM
-bash scripts/qa-gate.sh staging         # Pa11y + Lighthouse + e2e + Nuclei against web.baseUrl
-bash scripts/qa-gate.sh compliance      # axe EN 301 549 + legal scan + evidence bundle
-bash scripts/qa-gate.sh all             # pre-commit → pr → build → staging → compliance
+bash scripts/qa-gate.sh all             # before shipping: every stage, stops at the first FAIL
 ```
 
-`staging` and `compliance` need `web.baseUrl` in the repo config; without it they print SKIP. When the app is
-not answering, the gate runs `web.startCommand`, waits for `web.readyPath`, and stops what it started (by the
-PID on the port, never by process name). The browser toolchain (Playwright, axe, Lighthouse CI) installs itself
-once into `~/.claude/scripts/qa-gate/node_modules` on first use; Pa11y comes from the global install.
+Requirements: Git Bash (Windows) or bash (Linux), Node.js, git, curl. Docker for the security scanners and
+image builds. The browser toolchain (Playwright, axe, Lighthouse) installs itself on first use.
 
-Set `QA_GATE_HOME` to run a checkout other than `~/.claude/scripts/qa-gate` (the shim honours it).
+## A day with the gate
 
-## Profiles (cost follows the project's maturity)
+1. You (or an agent) commit. The hook runs `pre-commit`: typecheck, lint, unit tests, secrets. Seconds. A red
+   check blocks the commit and prints which one.
+2. Before merging, `pr` adds coverage with a ratchet that only moves up, dependency audit, Semgrep, Trivy, the
+   AI Act register, and a check that nobody edited the gate's own configuration to make it pass.
+3. Before a release, `build` scans the Docker image, `staging` audits the running app (Pa11y, Lighthouse, your
+   e2e suite, Nuclei), and `compliance` runs the German legal rules in a real browser and writes a dated evidence
+   file you can hand to a client, their data-protection officer, or a Kammer.
+4. Every four weeks a scheduled task re-audits your live sites and checks whether the laws behind the rules
+   changed. No tokens are spent unless something actually changed.
 
-`profile` in the repo config: `auto` (default) reads `DEPLOY_PROFILE` from `.env` / `infra/.env` / `deploy/.env` and
-falls back to `portfolio-demo`. Each profile lists checks that become SKIP and may override Lighthouse intensity:
+## What you get back
 
-| Profile | Skipped | Lighthouse | Typical use |
-|---|---|---|---|
-| `sandbox` | coverage, integration, semgrep, trivy-fs, ai-register, all web checks, build | none | prototypes that may be thrown away: typecheck, lint, unit, audit, secrets only, no Docker |
-| `portfolio-demo` (default) | nuclei, lighthouse | 1 run mobile if enabled elsewhere | demos and portfolio verticals |
-| `mvp-client` | nuclei | 1 run, mobile | a real client evaluating |
-| `production` | nothing | 3 runs, mobile + desktop | paying users |
+Always the same block, at most 25 lines:
 
-Promote a project by changing one word. The first summary line shows the active profile.
+```
+QA-GATE pr · softki-de · portfolio-demo · 2026-09-05T10:40 · 97s · FAIL
+PASS  typecheck@go   build+vet ok                                 32s
+PASS  unit@go        ok                                           21s
+WARN  semgrep        0 error / 27 warning → qa-report/semgrep.json   33s
+FAIL  trivy-fs       0 high / 1 critical → qa-report/trivy-fs.json   14s
+PASS  gate-config    matches main                                  0s
+json  qa-report/gate-pr-latest.json
+log   qa-report/_logs/pr-20260905-1040.log
+```
+
+- **PASS** nothing to do · **FAIL** blocks and names the report to open · **SKIP** does not apply here, and says
+  why (profile, feature, sector, date, no Docker, no web) · **WARN** worth a look before a release.
+- The JSON next to it is what an orchestrator verifies after delegating work to an agent. Logs are for humans
+  chasing a FAIL, never for the model.
+
+## Profiles: cost follows maturity
+
+| Profile | What runs | Use it for |
+|---|---|---|
+| `sandbox` | typecheck, lint, unit, audit, secrets — no Docker, no web | prototypes that may be thrown away |
+| `portfolio-demo` (default) | everything except Lighthouse and Nuclei | demos and portfolio projects |
+| `mvp-client` | + Lighthouse (1 run, mobile), stricter legal rules | a real client evaluating |
+| `production` | everything, Lighthouse 3 runs mobile + desktop | paying users |
+
+Set `"profile"` in `qa-gate.config.json` or `DEPLOY_PROFILE` in the repo's `.env`. Promote a project by changing
+one word.
+
+## The German legal layer
+
+`compliance` loads a registry of legal rules (`lib/web/legal/rules.json`), each with the law behind it, the date
+it applies from or until, the profiles it runs in and the features it needs. The rules run in a real browser
+against the site:
+
+- **Impressum and Datenschutz** reachable from every page; Impressum fields (address, e-mail, legal form, no
+  outdated "TMG" wording); the Datenschutzerklärung contains the Art. 13 sections a DSB reads first, names a DSB
+  when the profession needs one, and explains third-country transfers when US vendors load.
+- **Consent**: nothing third-party and no Google Fonts before consent, tracking cookies only after, an equally
+  prominent Ablehnen button, a permanent Cookie-Einstellungen link, and the reject path really rejects.
+- **Accessibility** (BFSG / EN 301 549): axe-core with the EN tag, a `/barrierefreiheit` statement naming the
+  standard and a contact.
+- **Shop and food** (when enabled): delivery costs, delivery time, Muster-Widerrufsformular, the 30-day lowest
+  price on struck prices, "Zahlungspflichtig bestellen", allergens.
+- **AI Act**: the chatbot discloses it is a machine, generated content is labelled, the model provider is named,
+  a human contact exists, and a `docs/AI-ACT-REGISTER.md` exists when the code calls a model.
+- **VSBG** statement, and the obsolete EU ODR link (platform closed 20.07.2025) flagged as an Abmahnung risk.
+
+### Sector packs
+
+A landing page for a Steuerberater is not a landing page for a pizzeria. Set `"legal": { "sector": "…" }` and the
+gate adds the profession's duties from `lib/web/legal/packs/<sector>.json`: Kammer, register numbers,
+supervising authority, professional liability insurance, mandatory statements, and prohibited advertising
+wording (HWG, UWG, StBerG). Packs today: `gastro`, `handwerk`, `pflege`, `versicherung`, `steuerberatung`,
+`rechtsanwalt`, `arzt`, `immobilien`, `kfz`. Each pack lists its sources, a review date, the duties no tool can
+verify (`manual`) and the open legal questions for a lawyer (`pruefen`). An unknown sector is a FAIL.
+
+### Keeping the rules current
+
+Laws change every few months, not every day. A scheduled task hashes the official source page of every rule
+(every 4 weeks, no tokens) and leaves a diff when one changed. The `/legal-review` command reads only those
+diffs, drafts the rule change as a pull request on this repo, and never merges: a legal change is a human
+decision. Every rule also carries a quarterly review date; past it, the gate prints `WARN legal.rules-stale`.
+
+## Where AI is used, and where it is not
+
+The verdicts are deterministic. AI is used only where judgment saves human work, and it proposes:
+
+- `qa-gate suggest` proposes the repo's configuration from a structure-only digest (file names, manifests,
+  routes — never code).
+- `/legal-review` drafts legal rule updates.
+- An agent can triage a red gate.
+
+Providers are chosen dynamically: on a developer machine Ollama (local, free, data stays on the machine), then
+the MiniMax plan, then DeepSeek; in CI MiniMax then DeepSeek. Each has a timeout and one retry. When no provider
+answers, the command exits 4 and says so: the agent that requested the step does it by hand. **EU policy**: a task
+that carries repo content or customer data may only use providers that keep data on the machine.
+
+## Working with agents
+
+Any agent that commits goes through the hook without knowing it exists. Coding agents get a Definition of Done
+in `AGENTS.md`: run `pr`, paste the summary block, never touch the gate's configuration. The orchestrator opens
+`qa-report/gate-pr-latest.json` and decides. If an agent lowers a threshold in a branch, `gate-config` fails.
+
+## Frequently asked
+
+- **Does it slow me down?** `pre-commit` is seconds. `pr` is a minute or two on a normal repo; Semgrep scans
+  only the files changed on a branch, Trivy skips build directories.
+- **Does it need Docker all the time?** No. Only `pr`, `build` and Nuclei. Without Docker those checks are FAIL
+  with a reason, or SKIP with `--no-docker`.
+- **Does it replace a lawyer?** No. It proves presence, technique and dates. The wording of Impressum, AGB and
+  Datenschutzerklärung and the licences of images stay human work. The `pruefen` lists tell the lawyer where to look.
+- **Can an agent switch checks off?** Not silently. Configuration changes on a branch fail `gate-config`, and
+  every SKIP names its reason in the report.
+
+---
+
+# Reference
 
 ## CLI
 
@@ -154,6 +265,19 @@ Everything else (tool output, debug) is in the log file, never on stdout.
 | `legal.impressum.requiredPatterns` | `[]` | extra regexes the Impressum must contain (e.g. `HRB`, `USt-IdNr`) |
 | `report.dir` / `keepLogs` | `qa-report` / 10 | where verdicts and logs go; older logs per stage are pruned |
 
+## Live sites and legal watch (no tokens)
+
+- `qa-gate.sh compliance --base-url https://example.de` audits the site people actually see. `/ship` runs it after
+  a deploy on mvp-client/production profiles and commits the evidence bundle (`Target: … (live)`).
+- `scripts/live-compliance.sh [registry]` runs that for every entry of `~/.claude/qa-gate/live-sites.json`
+  (`[{ "repo", "url", "paths" }]`). Scheduled every 4 weeks on Windows as task `QaGate-LiveCompliance`; repos on GitHub get
+  the same from the workflow's monthly `schedule` once the `LIVE_URL` repository variable exists.
+- `scripts/legal-watch.sh` fetches the `source` page of every rule in `lib/web/legal/rules.json`, normalises and
+  hashes it, and writes `~/.claude/qa-gate/legal-watch/pending/<rule>.diff` when it changed. Scheduled every 4 weeks as
+  `QaGate-LegalWatch`. The Claude Code command `/legal-review` reads only the pending diffs, drafts the rule change
+  on a branch of this repo with the source quoted and opens a PR; merging is a human decision. `rules.json`
+  carries `reviewedAt` / `reviewEveryMonths`; past the date the gate prints `WARN legal.rules-stale`.
+
 ## Adding a stack
 
 1. `lib/stack-<name>.sh` with `<name>_typecheck`, `<name>_lint`, `<name>_unit`, `<name>_coverage` (sets `R_VALUE`).
@@ -173,50 +297,6 @@ alt, AI chat without disclosure) that must FAIL `compliance`; T10 covers the `ai
 fixture (pre-commit and pr), a planted GitHub token blocking without leaking, the coverage ratchet, gate-config
 tampering, `init` idempotency and the installed hook, and, when Docker is up, a vulnerable dependency plus a
 planted AWS key and command injection for Semgrep. The node fixture installs its own `node_modules` once.
-
-## Live sites and legal watch (no tokens)
-
-- `qa-gate.sh compliance --base-url https://example.de` audits the site people actually see. `/ship` runs it after
-  a deploy on mvp-client/production profiles and commits the evidence bundle (`Target: … (live)`).
-- `scripts/live-compliance.sh [registry]` runs that for every entry of `~/.claude/qa-gate/live-sites.json`
-  (`[{ "repo", "url", "paths" }]`). Scheduled every 4 weeks on Windows as task `QaGate-LiveCompliance`; repos on GitHub get
-  the same from the workflow's monthly `schedule` once the `LIVE_URL` repository variable exists.
-- `scripts/legal-watch.sh` fetches the `source` page of every rule in `lib/web/legal/rules.json`, normalises and
-  hashes it, and writes `~/.claude/qa-gate/legal-watch/pending/<rule>.diff` when it changed. Scheduled every 4 weeks as
-  `QaGate-LegalWatch`. The Claude Code command `/legal-review` reads only the pending diffs, drafts the rule change
-  on a branch of this repo with the source quoted and opens a PR; merging is a human decision. `rules.json`
-  carries `reviewedAt` / `reviewEveryMonths`; past the date the gate prints `WARN legal.rules-stale`.
-
-## Sector packs: the profession-specific German duties
-
-Set `legal.sector` in the repo config (`gastro`, `handwerk`, `pflege`, `versicherung`, `steuerberatung`, …) and the
-compliance stage loads `lib/web/legal/packs/<sector>.json` — the duties a Kammer, an Aufsichtsbehörde or a
-competitor's lawyer checks first: profession-specific Impressum fields (Kammer, Register, Aufsichtsbehörde,
-Berufsbezeichnung), required statements (Berufshaftpflicht per DL-InfoV, Erstinformation per VersVermV, Allergene
-per LMIV), required links (berufsrechtliche Regelungen, Vermittlerregister) and prohibited advertising wording (HWG,
-UWG, StBerG § 57a). Four generic checks execute the pack: `sector.impressum`, `sector.statements`, `sector.links`,
-`sector.forbidden-wording`. An unknown sector is a FAIL, never a silent pass. Every pack lists its `sources`, a
-`reviewedAt` date, a `manual` list (duties no tool can verify) and `pruefen` items for the lawyer.
-`scripts/validate-packs.mjs` checks every pack's schema and regexes (self-test T15). Packs are drafted by the AI
-layer from official sources and approved by a human — like the legal rules.
-
-## AI in the gate: advisory only, provider-agnostic, EU data policy
-
-The gate's verdicts are deterministic. AI is used only where judgment saves human work, and it proposes; a person
-merges. `lib/ai/providers.json` defines providers and a chain per context: **local** = Ollama (on-machine,
-$0, PII-safe) → MiniMax coding plan → DeepSeek; **CI** (`GITHUB_ACTIONS`/`CI` set) = MiniMax → DeepSeek. Override
-with `QA_GATE_AI="ollama,minimax"`, disable with `QA_GATE_AI=none`. Each provider gets a timeout (Ollama 240 s for
-the cold model load, others 120 s) and one retry; auth or unreachable providers are skipped at once. When the whole
-chain fails the command exits **4** and prints `AI-UNAVAILABLE <task>: … Fallback: the agent that requested this
-step performs it by hand` — nothing hangs, nothing is decided silently. **Germany/EU policy**: a task flagged
-`pii=yes` (repo content, customer data, logs) may only use providers with `dataLeavesMachine: false`; structure-only
-digests (file names, manifests, routes) may go online. `mock` exists for the self-tests.
-
-Consumers today:
-- `qa-gate.sh suggest` — proposes `qa-gate.config.json` (profile, web paths, start command, legal features, checkout
-  path, chat selector) from a structure-only digest and writes `qa-gate.config.suggested.json`; never overwrites.
-- `/legal-review` — drafts legal rule changes as a PR (runs inside Claude Code).
-- opencode agent `qa-gate` — triage of red gates.
 
 ## Templates for the German layer
 
