@@ -1,0 +1,50 @@
+# The gate gates itself: every push runs the published Action from this checkout (`uses: ./`), which proves
+# action.yml, the pr stage on a real Ubuntu runner (Docker available → Semgrep + Trivy) and the SARIF upload.
+name: qa-gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  self-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+
+      - name: Gate — pr (this checkout as the Action)
+        id: gate
+        uses: ./
+        with:
+          stage: pr
+
+      - name: Publish SARIF to code scanning
+        if: always() && hashFiles('qa-report/gate-pr.sarif') != ''
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@6f5948dfacef28e207b48d0905cf90c03365536d # v3.37.9
+        with:
+          sarif_file: qa-report/gate-pr.sarif
+          category: qa-gate/pr
+
+      - name: Upload gate reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: qa-report
+          path: |
+            qa-report/*.json
+            qa-report/*.sarif
+            qa-report/_logs/*.log
+          retention-days: 14

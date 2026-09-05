@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "gateVersion": "0.6.0",
+  "profile": "portfolio-demo",
+  "stack": "node",
+  "git": {
+    "base": "main"
+  },
+  "secrets": {
+    "excludes": [
+      "node_modules",
+      ".git",
+      "qa-report",
+      "tests/fixtures"
+    ]
+  },
+  "waivers": [
+    {
+      "check": "audit",
+      "until": "2026-12-31",
+      "reason": "extract-zip GHSA-jmr9-qjv8-65gv (symlink path traversal) via @lhci/cli 0.15.1 → lighthouse → puppeteer-core; no fixed release exists (latest 2.0.1 is the vulnerable one). Toolchain-only dependency used to unpack Lighthouse's own browser download on a developer machine or CI runner, never on user input. Re-check when @lhci/cli or extract-zip publishes a fix.",
+      "by": "Limber Martinez"
+    }
+  ]
+}
