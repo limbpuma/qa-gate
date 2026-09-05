@@ -7,6 +7,7 @@ Reply with ONE JSON object and nothing else. Allowed keys (omit what you cannot 
   "profile": "sandbox" | "portfolio-demo" | "mvp-client" | "production",
   "web": { "baseUrl": "http://localhost:<port>", "paths": ["/", "..."], "startCommand": "<command that serves baseUrl>", "readyPath": "/" },
   "legal": {
+    "sector": "gastro" | "handwerk" | "pflege" | "versicherung" | "steuerberatung" | "rechtsanwalt" | "arzt" | "immobilien" | "" ,
     "features": ["shop" | "food" | "forms" | "newsletter"],
     "impressumPath": "/impressum", "datenschutzPath": "/datenschutz", "barrierefreiheitPath": "/barrierefreiheit",
     "agbPath": "/agb", "widerrufPath": "/widerruf", "checkoutPath": "/<checkout route or empty>",
@@ -19,6 +20,9 @@ Reply with ONE JSON object and nothing else. Allowed keys (omit what you cannot 
 Rules:
 - German/EU market: any site selling or booking to consumers is at least "portfolio-demo"; choose "mvp-client" only
   when the digest shows deployment files for a real customer; never "production".
+- "sector": the regulated profession the site belongs to, when the digest makes it evident (menu → gastro,
+  Handwerkskammer/Meister → handwerk, Pflegedienst → pflege, Versicherungsmakler → versicherung, Steuerberater →
+  steuerberatung); empty when unsure — a wrong sector produces false failures.
 - "shop" when there is a cart/checkout/order/booking flow; "food" when the domain is restaurants, delivery, menus;
   "forms" when forms collect an e-mail; "newsletter" when a newsletter form exists.
 - paths: the start page plus every public route that matters legally (menu, checkout, booking, contact). Max 8.

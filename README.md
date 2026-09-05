@@ -149,6 +149,7 @@ Everything else (tool output, debug) is in the log file, never on stdout.
 | `web.nuclei.enabled` / `image` / `templates` / `severity` | true / pinned / misconfiguration + exposures / high,critical | |
 | `legal.ai.enabled` / `chatSelector` / `disclosureText` / `providers` / `registerPath` | `auto` / `""` / KI-Regex / `[]` / `docs/AI-ACT-REGISTER.md` | `auto` = AI checks run when `chatSelector` is set; list providers the backend calls (not visible on the wire) in `providers` |
 | `legal.*Path` / `checkoutPath` / `allowedHosts` / `consent` / `requiredHeaders` | `/impressum` `/datenschutz` `/barrierefreiheit` `/agb` `/widerruf` / `""` / `[]` / not required, DE+EN button texts, settings-link texts / CSP, nosniff, X-Frame, Referrer-Policy | the legal scan inputs; add first-party CDN hosts to `allowedHosts` |
+| `legal.sector` | `""` | loads `packs/<sector>.json`; see Sector packs |
 | `legal.features` | `[]` | enables feature-bound rules: `shop`, `food`, `forms`, `newsletter` (AI rules key off `legal.ai`) |
 | `legal.impressum.requiredPatterns` | `[]` | extra regexes the Impressum must contain (e.g. `HRB`, `USt-IdNr`) |
 | `report.dir` / `keepLogs` | `qa-report` / 10 | where verdicts and logs go; older logs per stage are pruned |
@@ -185,6 +186,19 @@ planted AWS key and command injection for Semgrep. The node fixture installs its
   `QaGate-LegalWatch`. The Claude Code command `/legal-review` reads only the pending diffs, drafts the rule change
   on a branch of this repo with the source quoted and opens a PR; merging is a human decision. `rules.json`
   carries `reviewedAt` / `reviewEveryMonths`; past the date the gate prints `WARN legal.rules-stale`.
+
+## Sector packs: the profession-specific German duties
+
+Set `legal.sector` in the repo config (`gastro`, `handwerk`, `pflege`, `versicherung`, `steuerberatung`, …) and the
+compliance stage loads `lib/web/legal/packs/<sector>.json` — the duties a Kammer, an Aufsichtsbehörde or a
+competitor's lawyer checks first: profession-specific Impressum fields (Kammer, Register, Aufsichtsbehörde,
+Berufsbezeichnung), required statements (Berufshaftpflicht per DL-InfoV, Erstinformation per VersVermV, Allergene
+per LMIV), required links (berufsrechtliche Regelungen, Vermittlerregister) and prohibited advertising wording (HWG,
+UWG, StBerG § 57a). Four generic checks execute the pack: `sector.impressum`, `sector.statements`, `sector.links`,
+`sector.forbidden-wording`. An unknown sector is a FAIL, never a silent pass. Every pack lists its `sources`, a
+`reviewedAt` date, a `manual` list (duties no tool can verify) and `pruefen` items for the lawyer.
+`scripts/validate-packs.mjs` checks every pack's schema and regexes (self-test T15). Packs are drafted by the AI
+layer from official sources and approved by a human — like the legal rules.
 
 ## AI in the gate: advisory only, provider-agnostic, EU data policy
 

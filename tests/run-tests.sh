@@ -291,6 +291,33 @@ test_suggest_without_ai_falls_back() {
   pass "$label"
 }
 
+test_sector_packs() {
+  local label="T14.sector-pack" dest out
+  dest=$(prep_fixture_repo web)
+  # gastro pack on the pizzeria fixture: allergens + gross prices present, no health claims → all sector checks pass or skip.
+  node -e '
+    const fs = require("fs"); const p = process.argv[1];
+    const j = JSON.parse(fs.readFileSync(p, "utf8")); j.legal.sector = "gastro";
+    fs.writeFileSync(p, JSON.stringify(j, null, 2) + "\n");
+  ' "$dest/qa-gate.config.json"
+  out=$(run_gate "$dest" compliance) || { fail "$label" "gastro pack failed · $(grep legal <<< "$out")"; return; }
+  node -e '
+    const j = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+    const f = (id) => (j.checks.find((c) => c.id === id) || {}).status;
+    const ok = f("sector.statements") === "PASS" && f("sector.forbidden-wording") === "PASS" && j.sector === "gastro";
+    if (!ok) { process.stdout.write(["sector.statements", "sector.forbidden-wording"].map((i) => i + "=" + f(i)).join(" ")); process.exit(1); }
+  ' "$dest/qa-report/compliance-scan.json" || { fail "$label" "gastro sector checks not PASS"; return; }
+  # Unknown sector must fail loudly, never pass silently.
+  node -e '
+    const fs = require("fs"); const p = process.argv[1];
+    const j = JSON.parse(fs.readFileSync(p, "utf8")); j.legal.sector = "does-not-exist";
+    fs.writeFileSync(p, JSON.stringify(j, null, 2) + "\n");
+  ' "$dest/qa-gate.config.json"
+  out=$(run_gate "$dest" compliance) && { fail "$label" "unknown sector did not FAIL"; return; }
+  grep -q 'no pack for sector' "$dest/qa-report/compliance-scan.json" || { fail "$label" "missing-pack reason absent"; return; }
+  pass "$label"
+}
+
 # --- Runner ----------------------------------------------------------------
 ensure_node_fixture_deps
 for fixture in node go python; do test_pre_commit_passes "$fixture"; done
@@ -306,6 +333,8 @@ test_ai_register
 test_env_without_profile_and_no_dockerfile
 test_suggest_with_mock_ai
 test_suggest_without_ai_falls_back
+test_sector_packs
+if node "$SCRIPT_DIR/../scripts/validate-packs.mjs" >/dev/null 2>&1; then pass "T15.packs-valid"; else fail "T15.packs-valid" "$(node "$SCRIPT_DIR/../scripts/validate-packs.mjs" 2>&1 | grep -A3 FAIL | head -6)"; fi
 
 printf '\n%s passed, %s failed\n' "$PASSED" "$FAILED"
 (( FAILED == 0 ))

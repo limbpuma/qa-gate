@@ -1,0 +1,79 @@
+{
+  "sector": "pflege",
+  "title": "Ambulanter Pflegedienst / Pflegeeinrichtung",
+  "reviewedAt": "2026-09-05",
+  "sources": [
+    "https://www.gesetze-im-internet.de/ddg/__5.html",
+    "https://www.gesetze-im-internet.de/dlinfov/__2.html",
+    "https://www.gesetze-im-internet.de/sgb_11/__72.html",
+    "https://www.gesetze-im-internet.de/sgb_11/__115.html",
+    "https://www.gesetze-im-internet.de/sgb_11/__120.html",
+    "https://www.gesetze-im-internet.de/sgb_11/__7.html",
+    "https://www.gesetze-im-internet.de/sgb_11/__89.html",
+    "https://www.gesetze-im-internet.de/wbvg/__3.html",
+    "https://www.gesetze-im-internet.de/heilmwerbg/__1.html",
+    "https://www.gesetze-im-internet.de/heilmwerbg/__3.html",
+    "https://www.gesetze-im-internet.de/heilmwerbg/__11.html",
+    "https://www.gesetze-im-internet.de/heilmwerbg/__12.html",
+    "https://www.gesetze-im-internet.de/heilmwerbg/anlage.html",
+    "https://www.gesetze-im-internet.de/vsbg/__36.html",
+    "https://www.gesetze-im-internet.de/pflbg/__1.html",
+    "https://www.gesetze-im-internet.de/bfsg/__2.html",
+    "https://www.gesetze-im-internet.de/bfsg/__3.html",
+    "https://www.gesetze-im-internet.de/bfsg/__14.html",
+    "https://www.gesetze-im-internet.de/bfsg/anlage_3.html",
+    "https://www.gesetze-im-internet.de/bgb/__312.html",
+    "https://www.gesetze-im-internet.de/bgb/__312g.html",
+    "https://www.gesetze-im-internet.de/sgb_5/__132a.html",
+    "https://eur-lex.europa.eu/eli/reg/2016/679/oj",
+    "https://recht.nrw.de/lrgv/gesetz/31012023-wohn-und-teilhabegesetz-wtg/",
+    "https://www.berlin.de/sen/pflege/pflege-und-rehabilitation/beschwerden/heimaufsicht/",
+    "https://www.bundestag.de/dokumente/textarchiv/2025/kw45-de-pflege-1116730",
+    "https://pflegekompass.de/magazin/ratgeber/pflegekammer-2026"
+  ],
+  "impressumPatterns": [
+    { "id": "aufsichtsbehoerde", "regex": "Aufsichtsbeh(ö|oe)rde|zust(ä|ae)ndige Beh(ö|oe)rde|Heimaufsicht|WTG-? ?Beh(ö|oe)rde|Wohn- und Teilhabegesetz|Wohnteilhabegesetz|Landesamt f(ü|ue)r (Gesundheit und )?Soziales", "law": "DDG § 5 Abs. 1 Nr. 3; DL-InfoV § 2 Abs. 1 Nr. 6; WTG NRW § 2 Abs. 2, § 9 (Anzeigepflicht, auch ambulante Dienste)", "severity": "FAIL", "note": "Stationäre Einrichtungen/Wohngemeinschaften stehen unter Heimaufsicht (Landesheimrecht, z.B. WTG NRW: Kreis/kreisfreie Stadt; Berlin: LAGeSo). Name + Anschrift der Behörde ins Impressum. Ambulante Dienste: in NRW ebenfalls WTG-Angebot (§ 2 Abs. 2 Nr. 4); in anderen Ländern siehe pruefen." },
+    { "id": "zulassung-sgb-xi", "regex": "Versorgungsvertrag|§ ?72 (SGB ?XI|Elftes Buch)|zugelassen(e|er|es)? (Pflegedienst|Pflegeeinrichtung|Leistungserbringer)|Zulassung[^.]{0,60}Pflegekasse|Pflegekassen?[^.]{0,60}zugelassen|Institutionskennzeichen|\\bIK[-: ]?\\d{9}", "law": "SGB XI § 72 (Zulassung durch Versorgungsvertrag) i.V.m. DDG § 5 Abs. 1 Nr. 3", "severity": "WARN", "note": "Zulassung erfolgt durch Versorgungsvertrag mit den Landesverbänden der Pflegekassen. Angabe (Vertragspartner, ggf. IK-Nummer) belegt die zulassungspflichtige Tätigkeit; Behandlungspflege zusätzlich Vertrag nach SGB V § 132a." },
+    { "id": "haftpflicht", "regex": "Berufshaftpflicht|Betriebshaftpflicht|Haftpflichtversicher", "law": "DL-InfoV § 2 Abs. 1 Nr. 11", "severity": "WARN", "note": "Nur wenn eine Berufshaftpflicht besteht (bei Pflegediensten praktisch immer): Name + Anschrift des Versicherers, räumlicher Geltungsbereich. Impressum oder Erstinformation." },
+    { "id": "berufsbezeichnung-kammer", "regex": "Pflegefachfrau|Pflegefachmann|Pflegefachperson|Gesundheits- und Krankenpfleger|Altenpfleger|Krankenschwester|Berufsbezeichnung|(Landes)?pflegekammer", "law": "DDG § 5 Abs. 1 Nr. 5; DL-InfoV § 2 Abs. 1 Nr. 5, Nr. 7; PflBG § 1", "severity": "WARN", "note": "Pflicht nur, wenn der Diensteanbieter selbst (natürliche Person) die geschützte Berufsbezeichnung führt bzw. Mitglied einer Pflegekammer ist. Kammern 2026: Rheinland-Pfalz und Nordrhein-Westfalen (Niedersachsen/Schleswig-Holstein 2021 aufgelöst, Baden-Württemberg gescheitert). Bei GmbH/gGmbH ist die Kammer nicht Diensteanbieter-Pflicht." }
+  ],
+  "statements": [
+    { "id": "dsgvo-art9-gesundheitsdaten", "regex": "Gesundheitsdaten|besondere(n|r)? Kategorien? personenbezogener Daten|Art(ikel|\\.)? ?9 (Abs|DSGVO|DS-GVO)", "pages": ["datenschutz", "any"], "law": "DSGVO Art. 9 Abs. 2 lit. a, Art. 13", "severity": "WARN", "note": "Kontakt-/Anfrageformulare mit Pflegegrad, Diagnose, Medikation = Gesundheitsdaten. Datenschutzerklärung muss Art. 9 nennen; das Formular braucht eine ausdrückliche Einwilligung (Checkbox, nicht vorangekreuzt), sonst Felder entfernen." },
+    { "id": "vsbg-streitbeilegung", "regex": "Verbraucherschlichtungsstelle|Streitbeilegung(sverfahren)?|Schlichtungsstelle", "pages": ["impressum", "agb"], "law": "VSBG § 36 Abs. 1, Abs. 2", "severity": "WARN", "note": "Erklärung, ob an Verbraucherschlichtung teilgenommen wird (auch die Nicht-Teilnahme ist zu erklären). Ausnahme: am 31.12. des Vorjahres 10 oder weniger Beschäftigte (§ 36 Abs. 3)." },
+    { "id": "qualitaetspruefung", "regex": "Qualit(ä|ae)tspr(ü|ue)fung|Pr(ü|ue)fergebnis|Qualit(ä|ae)tsdarstellung|Medizinische(n|r|s)? Dienst|\\bMDK?\\b|Transparenzbericht|Pr(ü|ue)fbericht", "pages": ["any"], "law": "SGB XI § 115 Abs. 1a; § 7 Abs. 3", "severity": "WARN", "note": "Gesetzliche Pflicht = Aushang in der Einrichtung (Datum der letzten Prüfung, Einordnung, Zusammenfassung) + Veröffentlichung durch die Landesverbände. Website-Nennung ist üblich und schützt vor Irreführung; Datum der letzten Prüfung angeben." },
+    { "id": "preise-verguetung", "regex": "Preisliste|Verg(ü|ue)tung(svereinbarung|sliste)?|Leistungs- und Preis|Entgelt|Kosten(ü|ue)bersicht|Preis(e|übersicht|uebersicht)", "pages": ["any"], "law": "SGB XI § 120 Abs. 3 (ambulant); WBVG § 3 Abs. 3 (stationär/WG); § 89 SGB XI", "severity": "WARN", "note": "Ambulant: schriftliche Info über voraussichtliche Kosten VOR Vertragsschluss (§ 120 Abs. 3). Stationär: Entgelte, Investitionskosten (§ 82 Abs. 3/4 SGB XI) und Gesamtentgelt in Textform (§ 3 Abs. 3 WBVG). Eine Preisseite/PDF erfüllt das für online angebahnte Verträge." }
+  ],
+  "requiredLinks": [
+    { "id": "qualitaetsbericht-link", "hrefRegex": "pflege-navigator|pflegelotse|pflegefinder|transparenzbericht|qualit(ä|ae)ts?(pr(ü|ue)fung|bericht|darstellung)|pr(ü|ue)fbericht", "law": "SGB XI § 115 Abs. 1a; § 7 Abs. 3", "severity": "WARN", "note": "Link auf das eigene Prüfergebnis (PDF) oder auf die Qualitätsdarstellung der Landesverbände (Pflege-Navigator, Pflegelotse)." },
+    { "id": "preisliste-link", "hrefRegex": "preis|verg(ü|ue)tung|kosten|entgelt|leistungen-und-preise", "law": "SGB XI § 120 Abs. 3; WBVG § 3 Abs. 3", "severity": "WARN", "note": "Preisliste/Vergütungsvereinbarung als Seite oder PDF verlinkt; Stand/Datum ausweisen." }
+  ],
+  "forbiddenWords": [
+    { "id": "hwg-erfolgsversprechen", "regex": "garantiert(e|er|es)? (Heilung|Besserung|Erfolg|Genesung|Schmerzfreiheit)|(Heilung|Erfolg|Genesung) (ist |wird )?garantiert|schmerzfrei garantiert|100 ?% (Erfolg|Heilung|sicher|Genesung)|mit Sicherheit (geheilt|erfolgreich|gesund)|heilt (Demenz|Dekubitus|Wunden|Diabetes|Parkinson)", "pages": ["any"], "law": "HWG § 3 Satz 2 Nr. 2 lit. a (Erfolg mit Sicherheit erwartet)", "severity": "FAIL", "note": "HWG gilt für Behandlungen/Verfahren (§ 1 Abs. 1 Nr. 2), also für Behandlungspflege (Wundversorgung, Medikamentengabe). Erfolgs- und Heilversprechen sind irreführend und abmahnfähig." },
+    { "id": "hwg-angstwerbung", "regex": "Lebensgefahr|lebensbedrohlich|(ohne|nicht) (unsere |fachgerechte |professionelle |rechtzeitige )?(Pflege|Behandlung|Versorgung|Hilfe)[^.]{0,80}(gef(ä|ae)hrd|verschlechter|droht|Tod|sterben)", "pages": ["any"], "law": "HWG § 11 Abs. 1 Satz 1 Nr. 7 (Gesundheit durch Nichtverwendung beeinträchtigt)", "severity": "FAIL", "note": "Angstwerbung: Aussagen, dass sich die Gesundheit ohne das beworbene Angebot verschlechtert. Sachliche Beratungshinweise ohne Drohkulisse sind erlaubt." },
+    { "id": "hwg-vorher-nachher", "regex": "Vorher[- /]?Nachher|Wundfotos?|Bilder? (der|von) (offenen? )?Wunden?|Dekubitus[^.]{0,20}(Foto|Bild|Galerie)", "pages": ["any"], "law": "HWG § 11 Abs. 1 Satz 1 Nr. 5 (bildliche Darstellung in missbräuchlicher, abstoßender oder irreführender Weise)", "severity": "WARN", "note": "Wund-/Dekubitus-Fotos und Vorher-Nachher-Vergleiche in der Publikumswerbung sind riskant; das strikte Vorher-Nachher-Verbot (§ 11 Abs. 1 Satz 3) gilt nur für plastisch-chirurgische Eingriffe." },
+    { "id": "hwg-aeusserungen-dritter", "regex": "Dankschreiben|Dankesbrief|Empfehlungsschreiben|Anerkennungsschreiben|Krankengeschichte|Patientengeschichte|Erfolgsgeschichte", "pages": ["any"], "law": "HWG § 11 Abs. 1 Satz 1 Nr. 3 und Nr. 11; UWG § 5b Abs. 3 (Echtheit von Bewertungen)", "severity": "WARN", "note": "Dank-/Empfehlungsschreiben und Krankengeschichten sind verboten, wenn missbräuchlich, abstoßend oder irreführend. Kundenstimmen ohne Heilungs-/Behandlungsbezug sind zulässig; Echtheit muss belegbar sein." },
+    { "id": "hwg-12-krankheiten", "regex": "(Krebs|Tumor|Karzinom|Suchtkrank|Alkoholkrank|Drogenabh(ä|ae)ngig|Tuberkulose|Hepatitis)[^.]{0,60}(heilen|behandeln|Behandlung|Therapie|lindern|Linderung)", "pages": ["any"], "law": "HWG § 12 Abs. 1, Abs. 2 i.V.m. Anlage Abschnitt A Nr. 1-3", "severity": "WARN", "note": "Publikumswerbung für Behandlungen darf sich nicht auf meldepflichtige Infektionen, bösartige Neubildungen und Suchtkrankheiten beziehen. Beschreibung der pflegerischen Versorgung/Begleitung (Palliativpflege) ist etwas anderes als ein Behandlungs- oder Linderungsversprechen." },
+    { "id": "mindestlaufzeit", "regex": "Mindest(vertrags)?laufzeit|Mindestlaufzeit von|Vertragsbindung von", "pages": ["any"], "law": "SGB XI § 120 Abs. 2 (Kündigung jederzeit ohne Frist); WBVG § 4 Abs. 1", "severity": "WARN", "note": "Ambulanter Pflegevertrag ist vom Pflegebedürftigen jederzeit ohne Frist kündbar; stationäre Verträge grundsätzlich unbefristet. Eine beworbene Mindestlaufzeit widerspricht dem und ist irreführend." },
+    { "id": "pflegenoten-alt", "regex": "Pflegenoten?|Pflege-?T(Ü|UE)V|Gesamtnote 1[,.]\\d|Note 1[,.]0", "pages": ["any"], "law": "UWG § 5 Abs. 1 (Irreführung); SGB XI § 115 Abs. 1a (Qualitätsdarstellung ersetzt Pflegenoten)", "severity": "WARN", "note": "Das Notensystem (Pflege-TÜV) wurde durch die Qualitätsdarstellung nach § 115 Abs. 1a abgelöst. Alte Noten ohne Datum wirken als aktuelle Qualitätsaussage und sind irreführend." }
+  ],
+  "manual": [
+    "Aushang in der Einrichtung: Datum der letzten MD-/PKV-Prüfung, Einordnung des Ergebnisses, Zusammenfassung (SGB XI § 115 Abs. 1a) — nicht per Website prüfbar.",
+    "Ambulant: schriftliche Kosteninformation vor Vertragsschluss und bei wesentlichen Änderungen (SGB XI § 120 Abs. 3); stationär: Textform-Information nach WBVG § 3 — Vertragsprozess prüfen, nicht nur die Website.",
+    "Formulare mit Gesundheitsdaten: Einwilligungstext, Speicherfrist, Verschlüsselung des Transports (TLS) und keine Gesundheitsdaten per unverschlüsselter E-Mail-Weiterleitung (DSGVO Art. 9, Art. 32).",
+    "Berufsbezeichnungen im Team-Bereich: 'Pflegefachfrau/-mann' nur mit Erlaubnis (PflBG § 1); Fotos von Pflegebedürftigen nur mit dokumentierter Einwilligung.",
+    "BFSG: Barrierefreiheitspflicht nur, wenn die Website eine Dienstleistung im elektronischen Geschäftsverkehr ist (Online-Vertragsabschluss/Buchung, BFSG § 1 Abs. 3 Nr. 5) und kein Kleinstunternehmen (< 10 Beschäftigte und ≤ 2 Mio. EUR, § 2 Nr. 17, § 3 Abs. 3); dann Informationen nach § 14 i.V.m. Anlage 3 Nr. 1.",
+    "Zusatzleistungen mit Online-Bestellung (Hausnotruf, Essen auf Rädern, Pflegehilfsmittel-Shop): Widerrufsbelehrung, Muster-Widerrufsformular, Button-Lösung (BGB § 312g, § 312j) — der generische Shop-Check greift nur bei erkanntem Checkout.",
+    "Heimaufsicht-Anzeige spätestens 2 Monate vor Betriebsaufnahme (WTG NRW § 9) — Betriebsvoraussetzung, nicht Website-Inhalt."
+  ],
+  "pruefen": [
+    "Gilt der Versorgungsvertrag nach SGB XI § 72 als 'behördliche Zulassung' i.S.v. DDG § 5 Abs. 1 Nr. 3, sodass die Landesverbände der Pflegekassen als Aufsichtsbehörde ins Impressum gehören? Keine Rechtsprechung gefunden; Muster-Impressen nennen sie regelmäßig.",
+    "Ambulante Dienste außerhalb NRW: ob sie dem jeweiligen Landesheimrecht unterliegen (Berlin WTG: nur stationär/WG) — Aufsichtsbehörde-FAIL für rein ambulante Dienste ggf. auf WARN herabstufen, wenn kein Landesgesetz greift.",
+    "Widerrufsrecht: BGB § 312 Abs. 2 Nr. 4 nimmt 'Verträge über soziale Dienstleistungen ... einschließlich Langzeitpflege' vom Fernabsatzrecht aus — ob online angebahnte Pflegeverträge (§ 120 SGB XI, WBVG) vollständig darunter fallen, anwaltlich bestätigen; deshalb keine Widerrufs-Pflichtangabe im Pack.",
+    "Pflegekompetenzgesetz (Bundestag 06.11.2025, Bundesrat 19.12.2025): Einführung der einheitlichen Bezeichnung 'Pflegefachperson' — ob § 1 PflBG geändert wurde und wie die Berufsbezeichnung im Impressum künftig lautet (gesetze-im-internet zeigt weiterhin Pflegefachfrau/-mann).",
+    "Pflegekammer NRW: Bestand 2026 verifizieren (Errichtung 2022; Auflösungsdebatten seit 2024) — Quelle pflegekompass.de ist sekundär.",
+    "HWG § 12 auf reine Pflegeleistungen: ob die Beschreibung von Palliativ-/onkologischer Pflege bereits 'Werbung für Behandlungen' zur Linderung i.S.v. § 12 Abs. 2 ist oder erst Behandlungsversprechen erfasst werden.",
+    "Übergang Pflegenoten → Qualitätsdarstellung: exakte Stichtage für stationär (2019) und ambulant (neue QPR ambulant) — für das Alter alter Noten auf Websites relevant.",
+    "Berufshaftpflicht vs. Betriebshaftpflicht: ob DL-InfoV § 2 Abs. 1 Nr. 11 die reine Betriebshaftpflicht eines Pflegedienstes erfasst.",
+    "SGB V § 132a (häusliche Krankenpflege): eigenständige Impressum-Relevanz neben § 72 SGB XI — als Zulassung oder nur Vertrag einzuordnen?"
+  ]
+}

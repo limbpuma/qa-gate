@@ -1,0 +1,31 @@
+{
+  "sector": "gastro",
+  "title": "Gastronomie / Lieferdienst",
+  "reviewedAt": "2026-09-05",
+  "sources": [
+    "https://eur-lex.europa.eu/eli/reg/2011/1169/oj",
+    "https://www.gesetze-im-internet.de/lmidv/",
+    "https://www.gesetze-im-internet.de/pangv_2022/",
+    "https://eur-lex.europa.eu/eli/reg/2018/848/oj",
+    "https://www.gesetze-im-internet.de/ddg/__5.html"
+  ],
+  "impressumPatterns": [],
+  "statements": [
+    { "id": "allergene", "regex": "Allergen|Allergene|Zusatzstoffe", "pages": ["any"], "law": "LMIV Art. 14, LMIDV § 2", "severity": "FAIL", "note": "Allergen and additive information must be reachable before the order for loose food sold online" },
+    { "id": "preise-brutto", "regex": "inkl\\.? ?MwSt|inklusive Mehrwertsteuer|Endpreis", "pages": ["any"], "law": "PAngV § 3", "severity": "FAIL", "note": "Consumer prices are total prices including VAT" }
+  ],
+  "requiredLinks": [],
+  "forbiddenWords": [
+    { "id": "bio-claim-without-control-body", "regex": "\\bBio\\b|\\bÖko\\b|biologisch", "pages": ["any"], "law": "VO (EU) 2018/848 Art. 30 ff. (Öko-Kontrollstelle DE-ÖKO-xxx)", "severity": "WARN", "note": "Using Bio/Öko requires certification and the control body code (DE-ÖKO-…) on the site; the gate cannot verify certification, hence WARN" },
+    { "id": "health-claim", "regex": "stärkt (das )?Immunsystem|heilt|gesundheitsfördernd|senkt (den )?Cholesterin", "pages": ["any"], "law": "Health-Claims-VO (EG) 1924/2006 Art. 10", "severity": "FAIL", "note": "Unauthorised health claims on food are a classic Abmahnung" }
+  ],
+  "manual": [
+    "Gaststättenerlaubnis / Gewerbeanmeldung are not website duties but must exist",
+    "Allergen data must be accurate per dish — the gate only checks it is offered",
+    "Zusatzstoffe declared with the legal footnotes (Farbstoff, Konservierungsstoff, …) in the menu"
+  ],
+  "pruefen": [
+    "Kennzeichnung of Zusatzstoffe online: numbering vs. wording accepted by the local Lebensmittelüberwachung",
+    "Pfand for delivery packaging (VerpackG § 33 Mehrwegangebotspflicht since 2023) — wording on the ordering page"
+  ]
+}

@@ -1,0 +1,74 @@
+{
+  "sector": "versicherung",
+  "title": "Versicherungsvermittler (§ 34d GewO)",
+  "reviewedAt": "2026-09-05",
+  "sources": [
+    "https://www.gesetze-im-internet.de/gewo/__34d.html",
+    "https://www.gesetze-im-internet.de/gewo/__11a.html",
+    "https://www.gesetze-im-internet.de/versvermv_2018/__15.html",
+    "https://www.gesetze-im-internet.de/versvermv_2018/__16.html",
+    "https://www.gesetze-im-internet.de/versvermv_2018/__17.html",
+    "https://www.gesetze-im-internet.de/vvg_2008/__60.html",
+    "https://www.gesetze-im-internet.de/vvg_2008/__61.html",
+    "https://www.gesetze-im-internet.de/vvg_2008/__214.html",
+    "https://www.gesetze-im-internet.de/ddg/__5.html",
+    "https://www.gesetze-im-internet.de/dlinfov/__2.html",
+    "https://www.gesetze-im-internet.de/vsbg/__36.html",
+    "https://www.gesetze-im-internet.de/bfsg/__1.html",
+    "https://www.gesetze-im-internet.de/bfsg/__3.html",
+    "https://www.vermittlerregister.info/kontakt",
+    "https://www.versicherungsombudsmann.de/kontakt/",
+    "https://www.pkv-ombudsmann.de/",
+    "https://www.frankfurt-main.ihk.de/standortpolitik/finanzplatz-frankfurt/finanzdienstleister-am-finanzplatz-frankfurt/brancheninformationen/versicherungsvermittlung-nach-34d-gewo/informationen-zum-vermittlerregister-5248484",
+    "https://www.ihk.de/hannover/hauptnavigation/recht/aktuell3/werbung-mit-dem-begriff-unabhaengigkeit--6835590",
+    "https://www.bundesfachstelle-barrierefreiheit.de/DE/Fachwissen/Produkte-und-Dienstleistungen/Barrierefreiheitsstaerkungsgesetz/FAQ-Versicherungen/faq-versicherungen_node.html",
+    "https://eur-lex.europa.eu/eli/reg/2016/679/oj (Art. 9 DSGVO)",
+    "https://www.ratgeberrecht.eu/aktuell/werbung-mit-unabhaengiger-versicherungsmakler/ (secondary: OLG Dresden 14 U 1740/24)"
+  ],
+  "impressumPatterns": [
+    { "id": "registernummer", "regex": "D-[A-Z0-9]{4}-[A-Z0-9]{5}-[0-9]{2}|Registrierungs-?\\s*(Nr|Nummer)|Registernummer|Vermittlerregister", "law": "DDG § 5 Abs. 1 Nr. 4; VersVermV § 15 Abs. 1 (Registrierungsnummer); GewO § 11a", "severity": "FAIL", "note": "Registernummer im Vermittlerregister, IHK-Musterformat D-1A2B-3C456-78 (IHK Frankfurt). Fehlt praktisch nie ohne Abmahnrisiko." },
+    { "id": "aufsichtsbehoerde", "regex": "Aufsichtsbeh(ö|oe)rde|Erlaubnisbeh(ö|oe)rde|zust(ä|ae)ndige\\s+(Industrie-?\\s*und\\s*Handelskammer|IHK)", "law": "DDG § 5 Abs. 1 Nr. 3; GewO § 34d Abs. 1 (Erlaubnis der IHK)", "severity": "FAIL", "note": "Erlaubnispflichtige Tätigkeit → zuständige IHK mit Name + Postanschrift (Ort der Erlaubnis), Link empfohlen." },
+    { "id": "status-34d", "regex": "Versicherungs(makler|vertreter|berater)\\s+mit\\s+Erlaubnis|gebundene[rn]?\\s+Versicherungsvertreter|§\\s*34\\s*d\\s*(Abs(atz|\\.)?\\s*[127])?[^§]{0,20}(GewO|Gewerbeordnung)", "law": "DDG § 5 Abs. 1 Nr. 5 b; VersVermV § 15 Abs. 1 (Eigenschaft); GewO § 34d Abs. 1, 2, 7", "severity": "FAIL", "note": "Status eindeutig: 'Versicherungsmakler mit Erlaubnis nach § 34d Abs. 1 GewO' / 'Versicherungsvertreter mit Erlaubnis nach § 34d Abs. 1 GewO' / 'gebundener Versicherungsvertreter nach § 34d Abs. 7 GewO' / 'Versicherungsberater nach § 34d Abs. 2 GewO'." },
+    { "id": "verleihungsstaat", "regex": "Bundesrepublik\\s+Deutschland|verliehen\\s+in|Verleihungsstaat", "law": "DDG § 5 Abs. 1 Nr. 5 b (Berufsbezeichnung + Staat der Verleihung)", "severity": "WARN", "note": "IHK-Muster: 'Versicherungsmakler mit Erlaubnis nach § 34d Abs. 1 GewO; Bundesrepublik Deutschland'." },
+    { "id": "berufsrecht", "regex": "berufsrechtliche[n]?\\s+Regelung|§§?\\s*59\\s*(-|–|bis)\\s*68\\s*VVG|VersVermV|Versicherungsvermittlungsverordnung", "law": "DDG § 5 Abs. 1 Nr. 5 c", "severity": "WARN", "note": "Nennen: § 34d GewO, §§ 59-68 VVG, VersVermV (IHK zusätzlich § 48b VAG) + Zugänglichkeit über gesetze-im-internet.de." },
+    { "id": "registerstelle-dihk", "regex": "Breite\\s+Stra(ß|ss)e\\s+29|10178\\s+Berlin|Deutsche[r]?\\s+Industrie-?\\s*und\\s*Handelskammer(tag)?|DIHK", "law": "VersVermV § 15 Abs. 1 (Anschrift/Telefon der gemeinsamen Stelle); GewO § 11a Abs. 1", "severity": "WARN", "note": "Registerstelle: DIHK, Breite Straße 29, 10178 Berlin, Tel. 0180 6005850 (0,20 €/Anruf), www.vermittlerregister.info." },
+    { "id": "berufshaftpflicht", "regex": "Berufshaftpflicht|Verm(ö|oe)genss?chaden-?haftpflicht", "law": "DL-InfoV § 2 Abs. 1 (Berufshaftpflichtversicherung: Name + Anschrift des Versicherers, räumlicher Geltungsbereich)", "severity": "WARN", "note": "Pflichtversicherung nach § 34d Abs. 5 GewO; DL-InfoV verlangt Versicherer + Geltungsbereich, nicht die Police." }
+  ],
+  "statements": [
+    { "id": "ombudsmann-versicherung", "regex": "Versicherungsombudsmann|Postfach\\s*0?8\\s*06\\s*32|10006\\s*Berlin", "pages": ["any"], "law": "VersVermV § 15 Abs. 1 (Anschrift der Schlichtungsstelle); VVG § 214 Abs. 1 Nr. 2; VSBG § 36 Abs. 1 Nr. 2", "severity": "FAIL", "note": "Versicherungsombudsmann e. V., Postfach 08 06 32, 10006 Berlin, www.versicherungsombudsmann.de — zuständig für Streit Vermittler ↔ Versicherungsnehmer." },
+    { "id": "ombudsmann-pkv", "regex": "Ombudsmann\\s+(der\\s+)?Private[n]?\\s+Kranken|PKV-?\\s*Ombudsmann|Postfach\\s*0?6\\s*02\\s*22|10052\\s*Berlin", "pages": ["any"], "law": "VersVermV § 15 Abs. 1 (Schlichtungsstelle); VVG § 214", "severity": "FAIL", "note": "Ombudsmann Private Kranken- und Pflegeversicherung, Postfach 06 02 22, 10052 Berlin, www.pkv-ombudsmann.de. Beide Ombudsleute nennen, sobald PKV/Pflege vermittelt wird." },
+    { "id": "beteiligungen-10", "regex": "Beteiligung(en)?[^.]{0,120}10\\s*(%|Prozent)|10\\s*(%|Prozent)[^.]{0,120}Beteiligung", "pages": ["any"], "law": "VersVermV § 15 Abs. 1 (unmittelbare/mittelbare Beteiligungen > 10 % an Versicherern und von Versicherern)", "severity": "WARN", "note": "Auch Negativaussage ('keine Beteiligungen über 10 %') erfüllt die Pflicht; Erstinformation muss beide Richtungen abdecken." },
+    { "id": "verguetung-art", "regex": "(Art\\s+der\\s+)?Verg(ü|ue)tung[^.]{0,160}(Provision|Courtage|Honorar|Zuwendung)|(Provision|Courtage|Honorar)[^.]{0,160}(Versicherungspr(ä|ae)mie|vom\\s+Kunden)", "pages": ["any"], "law": "VersVermV § 15 Abs. 1 (Art der Vergütung: vom Kunden gezahlt / in der Prämie enthaltene Provision / sonstige Zuwendungen / Kombination)", "severity": "WARN", "note": "Erstinformation muss sagen, WIE der Vermittler bezahlt wird; Honorarhöhe selbst ist nicht Website-Pflicht." },
+    { "id": "beratungsgrundlage", "regex": "Beratungsgrundlage|hinreichende[n]?\\s+(Zahl|Anzahl)\\s+(von\\s+)?(Versicher|auf\\s+dem\\s+Markt)|ausgewogene[n]?\\s+Marktuntersuchung|f(ü|ue)r\\s+welche\\s+Versicherer", "pages": ["any"], "law": "VVG § 60 Abs. 1-2 (Makler: hinreichende Zahl von Versicherern oder Hinweis auf eingeschränkte Auswahl; Vertreter: für welche Versicherer tätig)", "severity": "WARN", "note": "Gilt vor Abgabe der Vertragserklärung, nicht zwingend auf der Website — WARN als Hinweis, dass die Erstinformation es enthält." },
+    { "id": "vsbg-36", "regex": "Verbraucherschlichtung|Streitbeilegung(sverfahren)?[^.]{0,120}(teilzunehmen|Teilnahme|bereit|verpflichtet)", "pages": ["any"], "law": "VSBG § 36 Abs. 1 Nr. 1-2 (Website/AGB: Bereitschaft/Pflicht + zuständige Stelle mit Anschrift und Website)", "severity": "WARN", "note": "Nr. 1 entfällt bei ≤ 10 Beschäftigten (§ 36 Abs. 3), Nr. 2 (Stelle nennen) gilt, wenn Teilnahme zugesagt oder gesetzlich vorgesehen." },
+    { "id": "erstinformation-vorhanden", "regex": "Erstinformation|(Information(en)?|Mitteilung)\\s+(gem(ä|ae)(ß|ss)|nach)\\s+§\\s*15\\s*VersVermV|ersten?\\s+Gesch(ä|ae)ftskontakt", "pages": ["any"], "law": "VersVermV § 15 Abs. 1, § 16 Abs. 1-3", "severity": "WARN", "note": "Website-Veröffentlichung allein erfüllt § 15 NICHT (Papier ist Regelform, § 16 Abs. 1); Website nur mit Zustimmung/E-Mail-Adresse + dauerhafter Abrufbarkeit (§ 16 Abs. 2-3). Gate prüft nur, ob ein Erstinformations-Dokument existiert." },
+    { "id": "gesundheitsdaten-einwilligung", "regex": "Gesundheitsdaten|besondere[n]?\\s+Kategorien\\s+personenbezogener\\s+Daten|Art(ikel|\\.)?\\s*9\\s*(Abs(atz|\\.)?\\s*2)?[^.]{0,40}DSGVO", "pages": ["any"], "law": "DSGVO Art. 9 Abs. 2 lit. a, Art. 13; BDSG § 22 nur für Anbieter, nicht Vermittler", "severity": "WARN", "note": "Nur relevant bei Anfrage-/Angebotsformularen für PKV, BU, Risikoleben (Gesundheitsfragen): ausdrückliche Einwilligung + Datenschutzhinweis. Bei reinem Kontaktformular ohne Gesundheitsfelder ignorieren." },
+    { "id": "barrierefreiheit-erklaerung", "regex": "Erkl(ä|ae)rung\\s+zur\\s+Barrierefreiheit|Barrierefreiheitserkl(ä|ae)rung|Informationen\\s+zur\\s+Barrierefreiheit|Marktüberwachungsbeh(ö|oe)rde", "pages": ["any"], "law": "BFSG § 1 Abs. 3 Nr. 5, § 14 Abs. 1 Nr. 2; Ausnahme Kleinstunternehmen § 3 Abs. 3", "severity": "WARN", "note": "Greift, wenn über die Website Verträge angebahnt/abgeschlossen werden (Online-Angebot, Terminbuchung, Abschlussstrecke), nicht bei reiner Info-Seite; Kleinstunternehmen (Dienstleistung) sind befreit." }
+  ],
+  "requiredLinks": [
+    { "id": "vermittlerregister", "hrefRegex": "vermittlerregister\\.info", "law": "DDG § 5 Abs. 1 Nr. 4 (IHK-Empfehlung); VersVermV § 15 Abs. 1", "severity": "WARN", "note": "Link auf www.vermittlerregister.info neben der Registernummer (IHK-Muster)." },
+    { "id": "gesetze-im-internet", "hrefRegex": "gesetze-im-internet\\.de", "law": "DDG § 5 Abs. 1 Nr. 5 c (Zugänglichkeit der berufsrechtlichen Regelungen)", "severity": "WARN", "note": "IHK-Muster verweist auf www.gesetze-im-internet.de; jede andere zugängliche Quelle genügt ebenfalls." }
+  ],
+  "forbiddenWords": [
+    { "id": "unabhaengig-werbung", "regex": "unabh(ä|ae)ngige[rns]?\\s+(Versicherungs-?)?(makler|vermittl|berat|ansprechpartner|vergleich)|unabh(ä|ae)ngig(e|keit)?\\s+(und\\s+)?(neutral|kostenlos|provisionsfrei)", "pages": ["any"], "law": "UWG § 5 Abs. 1 (OLG Dresden 28.10.2025, 14 U 1740/24)", "severity": "WARN", "note": "'Unabhängig' bei provisionsfinanzierten Maklern irreführend; bei Vertretern (§ 34d Abs. 1/7, für Versicherer tätig) erst recht. Nur Versicherungsberater (§ 34d Abs. 2, keine Vorteile vom Versicherer) dürfen so werben." },
+    { "id": "verbraucherzentrale-empfehlung", "regex": "(von\\s+der|durch\\s+die)\\s+Verbraucherzentrale\\s+(empfohlen|ausgezeichnet|zertifiziert)|Verbraucherzentrale\\s+empfiehlt", "pages": ["any"], "law": "UWG § 5 Abs. 1 (OLG Dresden 14 U 1740/24)", "severity": "WARN", "note": "Empfehlungsbehauptung ohne belegbare Grundlage war Teil desselben Urteils; ebenso Werbung mit gesetzlicher Pflicht-Berufshaftpflicht als 'Mehrwert' (§ 5 Abs. 1 UWG, Selbstverständlichkeiten)." }
+  ],
+  "manual": [
+    "Erstinformation § 15 VersVermV muss AKTIV beim ersten Geschäftskontakt übergeben werden (Papier; dauerhafter Datenträger oder Website nur unter § 16 Abs. 2-3) — Website-PDF allein reicht nicht; Prozess (E-Mail-Versand, Beratungsprotokoll) prüfen.",
+    "Registernummer und Status im Vermittlerregister (www.vermittlerregister.info) abfragen und mit Impressum/Erstinformation abgleichen; Aufsichts-IHK = die im Register genannte Registerbehörde.",
+    "Beratungs- und Dokumentationspflicht § 61 VVG (Befragung, Rat mit Begründung, Dokumentation § 62 VVG) läuft im Beratungsprozess, nicht auf der Website.",
+    "Beschwerdemanagement § 17 VersVermV (Registrierung von Beschwerden, Teilnahme an außergerichtlicher Streitbeilegung) nur organisatorisch prüfbar.",
+    "Formulare mit Gesundheitsfragen (PKV/BU/Risikoleben): Einwilligungstext Art. 9 Abs. 2 lit. a DSGVO, TLS, Speicherfrist, Auftragsverarbeiter (Vergleichsrechner-Anbieter) im Datenschutzhinweis — Inhalt juristisch, nicht per Regex bewertbar.",
+    "Berufsbezeichnung 'Versicherungsberater' nur mit Erlaubnis § 34d Abs. 2 GewO; Makler/Vertreter dürfen sich nicht so nennen — Regex würde legitime Berater treffen, daher manuell.",
+    "BFSG-Anwendbarkeit: prüfen, ob über die Website Verträge angebahnt werden (Online-Angebot/Terminbuchung) und ob Kleinstunternehmen-Ausnahme § 3 Abs. 3 BFSG greift."
+  ],
+  "pruefen": [
+    "Nummerierung innerhalb § 15 Abs. 1 VersVermV (Status, Vergütung, Registerstelle, Beteiligungen, Schlichtungsstelle) im aktuellen Gesetzestext gegenprüfen — im Pack absichtlich nur 'Abs. 1' zitiert.",
+    "DL-InfoV § 2 Abs. 1: Nummer der Berufshaftpflicht-Angabe (vermutlich Nr. 11) verifizieren.",
+    "Gebundene Vertreter § 34d Abs. 7: IHK Frankfurt sieht sie von DDG § 5 Nr. 3/5 (keine eigene Erlaubnis) ausgenommen; Status + Registernummer bleiben nach § 15 VersVermV Pflicht — Gate-Regel 'aufsichtsbehoerde' ggf. auf Makler/Vertreter mit Erlaubnis beschränken.",
+    "BFSG § 2 (Definition Kleinstunternehmen: < 10 Beschäftigte und ≤ 2 Mio. € Umsatz/Bilanz) Nummer nicht verifiziert; Anwendbarkeit auf Vermittler-Websites laut Bundesfachstelle-FAQ (für Versicherer) nur bei elektronischer Vertragsanbahnung.",
+    "OLG Dresden 14 U 1740/24 (28.10.2025): Rechtskraft/Revision beim BGH prüfen; Urteil betrifft Makler, Übertragung auf Vertreter ist Schlussfolgerung, kein Urteil.",
+    "VSBG § 36 Abs. 1 Nr. 2: ob Versicherungsvermittler 'auf Grund von Rechtsvorschriften' zur Teilnahme verpflichtet sind (§ 214 VVG verpflichtet die Schlichtungsstelle zur Bearbeitung, nicht ausdrücklich den Vermittler) — Formulierung 'bereit' vs. 'verpflichtet' abstimmen.",
+    "Ob 'Versicherungsmakler' eine gesetzliche Berufsbezeichnung i. S. v. DDG § 5 Nr. 5 b ist (IHK: ja, mit 'Bundesrepublik Deutschland'); § 48b VAG als berufsrechtliche Regelung (IHK-Muster) inhaltlich prüfen."
+  ]
+}

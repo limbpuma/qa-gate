@@ -1,0 +1,83 @@
+{
+  "sector": "steuerberatung",
+  "title": "Steuerberater / Steuerberatungsgesellschaft",
+  "reviewedAt": "2026-09-05",
+  "variants": ["Lohnsteuerhilfeverein (§ 4 StBerG, Aufsicht OFD § 27 StBerG)", "Buchhalter mit beschränkter Befugnis (§ 6 Abs. 1 Nr. 1, § 8 Abs. 4 StBerG)"],
+  "sources": [
+    "https://www.gesetze-im-internet.de/ddg/__5.html",
+    "https://www.gesetze-im-internet.de/dlinfov/__2.html",
+    "https://www.gesetze-im-internet.de/stberg/index.html",
+    "https://www.gesetze-im-internet.de/stberg/__43.html",
+    "https://www.gesetze-im-internet.de/stberg/__57.html",
+    "https://www.gesetze-im-internet.de/stberg/__57a.html",
+    "https://www.gesetze-im-internet.de/stberg/__67.html",
+    "https://www.gesetze-im-internet.de/stberg/__53.html",
+    "https://www.gesetze-im-internet.de/stberg/__55f.html",
+    "https://www.gesetze-im-internet.de/stberg/__55g.html",
+    "https://www.gesetze-im-internet.de/stberg/__40.html",
+    "https://www.gesetze-im-internet.de/stberg/__76.html",
+    "https://www.gesetze-im-internet.de/stberg/__4.html",
+    "https://www.gesetze-im-internet.de/stberg/__6.html",
+    "https://www.gesetze-im-internet.de/stberg/__8.html",
+    "https://www.gesetze-im-internet.de/stberg/__25.html",
+    "https://www.gesetze-im-internet.de/stberg/__27.html",
+    "https://www.gesetze-im-internet.de/stbdv/__52.html",
+    "https://www.gesetze-im-internet.de/stbgebv/__4.html",
+    "https://www.gesetze-im-internet.de/vsbg/__36.html",
+    "https://www.gesetze-im-internet.de/bgb/__312g.html",
+    "https://www.bstbk.de/de/themen/berufsrecht",
+    "https://www.bstbk.de/downloads/bstbk/recht-und-berufsrecht/fachinfos/BStBK_Berufsordnung-inkl-Fachberaterordnung.pdf",
+    "https://www.bstbk.de/de/themen/berufsrecht/steuerberaterverguetungsverordnung",
+    "https://consumer-redress.ec.europa.eu/site-relocation_en"
+  ],
+  "impressumPatterns": [
+    { "id": "berufsbezeichnung", "regex": "Steuerberater(in|innen)?\\b|Steuerbevollm(ä|ae)chtigte[rn]?|Steuerberatungsgesellschaft", "law": "DDG § 5 Abs. 1 Nr. 5 lit. b; StBerG § 43 Abs. 1, § 55g", "severity": "FAIL", "note": "Gesetzliche Berufsbezeichnung wörtlich (Steuerberater/-in, Steuerbevollmächtigte/-r). 'Steuerberatungsgesellschaft' nur bei Berechtigung nach § 55g StBerG; andere Zusätze nur amtlich verliehen (§ 43 Abs. 2)." },
+    { "id": "verleihungsstaat", "regex": "Bundesrepublik\\s+Deutschland|verliehen\\s+(in|durch)|Verleihungsstaat", "law": "DDG § 5 Abs. 1 Nr. 5 lit. b", "severity": "FAIL", "note": "Staat, in dem die Berufsbezeichnung verliehen wurde: 'verliehen in der Bundesrepublik Deutschland'. Nur 'Deutschland' in der Adresse reicht nicht als Zuordnung." },
+    { "id": "kammer", "regex": "Steuerberaterkammer", "law": "DDG § 5 Abs. 1 Nr. 5 lit. a und Nr. 3; StBerG § 40 Abs. 1, § 76 Abs. 1", "severity": "FAIL", "note": "Zuständige Steuerberaterkammer (Bestellung § 40, Berufsaufsicht § 76) mit Name und Anschrift — sie ist zugleich Kammer (Nr. 5a) und Aufsichtsbehörde (Nr. 3). Adressvollständigkeit ist manuell zu prüfen." },
+    { "id": "berufsrecht-stberg", "regex": "Steuerberatungsgesetz|\\bStBerG\\b", "law": "DDG § 5 Abs. 1 Nr. 5 lit. c", "severity": "FAIL", "note": "Bezeichnung der berufsrechtlichen Regelungen: mindestens das StBerG muss genannt sein, plus Angabe, wie zugänglich (Link, siehe requiredLinks)." },
+    { "id": "berufsrecht-weitere", "regex": "Durchf(ü|ue)hrungsverordnung|\\bDVStB\\b|Berufsordnung|\\bBOStB\\b|Verg(ü|ue)tungsverordnung|\\bStBVV\\b", "law": "DDG § 5 Abs. 1 Nr. 5 lit. c; BStBK-Berufsrechtsseite (StBerG, DVStB, BOStB, StBVV)", "severity": "WARN", "note": "BStBK listet als berufsrechtliche Regelungen StBerG, DVStB, BOStB (Fassung 01.08.2022) und StBVV. Alle vier nennen; Regex fängt nur, ob überhaupt eine der drei Zusatzquellen erscheint." },
+    { "id": "haftpflicht", "regex": "Berufshaftpflicht|Verm(ö|oe)gensschaden-?haftpflicht|Haftpflichtversicher", "law": "DL-InfoV § 2 Abs. 1 Nr. 11; StBerG § 67 Abs. 1 (Einzel), § 55f Abs. 1 (Gesellschaft); DVStB § 52 (250.000 € je Fall)", "severity": "FAIL", "note": "Pflichtversicherung besteht immer, daher greift die 'falls'-Klausel der DL-InfoV stets: Name und Anschrift des Versicherers angeben." },
+    { "id": "haftpflicht-geltungsbereich", "regex": "r(ä|ae)umliche[rn]?\\s+Geltungsbereich|Geltungsbereich\\s+(der|des)\\s+(Versicherung|Versicherungsschutz)|weltweit|(EU|EWR|Europ(ä|ae)ische[rn]?\\s+Union)", "law": "DL-InfoV § 2 Abs. 1 Nr. 11", "severity": "WARN", "note": "Räumlicher Geltungsbereich der Berufshaftpflicht ist ausdrücklich Pflichtangabe; WARN, weil DL-InfoV § 2 Abs. 2 alternative Bereitstellung (z. B. Mandatsunterlagen) zulässt. Im Impressum aber vollständig, wenn dort begonnen." },
+    { "id": "ustid", "regex": "USt-?\\s?Id(Nr|ent)|Umsatzsteuer-?\\s?Identifikationsnummer|\\bDE\\s?\\d{9}\\b|Wirtschafts-?Identifikationsnummer|W-?IdNr", "law": "DDG § 5 Abs. 1 Nr. 6", "severity": "WARN", "note": "Nur Pflicht, wenn USt-IdNr (§ 27a UStG) oder W-IdNr (§ 139c AO) vorhanden; Kanzleien haben sie praktisch immer. Steuernummer ist kein Ersatz." },
+    { "id": "register", "regex": "Handelsregister|Partnerschaftsregister|\\bHRB\\s?\\d|\\bHRA\\s?\\d|\\bPR\\s?\\d", "law": "DDG § 5 Abs. 1 Nr. 4; StBerG § 53 Abs. 1 (Anerkennung durch Kammer)", "severity": "WARN", "note": "Nur für Gesellschaften (GmbH, PartG mbB, AG usw.): Register + Nummer. Bei Steuerberatungsgesellschaft zusätzlich Hinweis 'anerkannt durch Steuerberaterkammer X' (§ 53); Einzelkanzlei: Pattern ignorieren." }
+  ],
+  "statements": [
+    { "id": "vsbg", "regex": "Verbraucherschlichtungsstelle|Streitbeilegungsverfahren|Streitbeilegung\\s+vor\\s+einer", "pages": ["impressum", "agb", "any"], "law": "VSBG § 36 Abs. 1 (Ausnahme Abs. 3: ≤ 10 Beschäftigte)", "severity": "WARN", "note": "Erklärung, ob Teilnahme an Verbraucherschlichtung bereit/verpflichtet; > 10 Beschäftigte am 31.12. des Vorjahres → Pflicht, sonst empfohlen." },
+    { "id": "widerruf-verbrauchermandat", "regex": "Widerrufsrecht|Widerrufsbelehrung|Widerrufsformular", "pages": ["agb", "any"], "law": "BGB § 312g Abs. 1 i. V. m. § 355", "severity": "WARN", "note": "Nur wenn Mandate mit Verbrauchern (§ 13 BGB) online/fernmündlich geschlossen werden (Fernabsatz): 14 Tage Widerruf, Belehrung + Muster-Widerrufsformular. Reines Kontaktformular ohne Vertragsschluss löst keine Pflicht aus." },
+    { "id": "verguetung-hinweis", "regex": "Verg(ü|ue)tungsvereinbarung|Steuerberaterverg(ü|ue)tungsverordnung|\\bStBVV\\b", "pages": ["any"], "law": "StBVV § 4 Abs. 1 (Textform, Bezeichnung) und Abs. 3 (Hinweispflicht Textform)", "severity": "WARN", "note": "Die gesetzliche Hinweispflicht (höhere/niedrigere Vergütung vereinbar) gilt gegenüber dem Mandanten in Textform, nicht zwingend auf der Website; Nennung der StBVV auf der Website ist Transparenz-Best-Practice." },
+    { "id": "kontaktformular-rechtsgrundlage", "regex": "(Kontaktformular|Kontaktanfrage|Kontaktaufnahme)[\\s\\S]{0,800}?(Art\\.?\\s*6\\s*Abs\\.?\\s*1|Rechtsgrundlage)", "pages": ["any"], "law": "DSGVO Art. 13 Abs. 1 lit. c; StBerG § 57 Abs. 1 (Verschwiegenheit)", "severity": "WARN", "note": "Datenschutzerklärung muss Zweck + Rechtsgrundlage der Kontaktformular-Verarbeitung nennen (Art. 6 Abs. 1 lit. b Anbahnung / lit. f). Steuerdaten sind Berufsgeheimnis: Formular sollte vor Upload von Belegen warnen oder verschlüsselten Kanal bieten." }
+  ],
+  "requiredLinks": [
+    { "id": "berufsrecht-zugang", "hrefRegex": "bstbk\\.de|gesetze-im-internet\\.de/(stberg|stbdv|stbgebv)", "law": "DDG § 5 Abs. 1 Nr. 5 lit. c", "severity": "WARN", "note": "'Angabe, wie die Regelungen zugänglich sind': Link auf www.bstbk.de (Themen → Berufsrecht: StBerG, DVStB, BOStB-PDF, StBVV) oder direkt auf gesetze-im-internet.de. Textnennung ohne Link ist vertretbar, daher WARN." }
+  ],
+  "forbiddenWords": [
+    { "id": "odr-plattform-obsolet", "regex": "ec\\.europa\\.eu/consumers/odr|OS-Plattform|Online-Streitbeilegung\\s+der\\s+(EU|Europ(ä|ae)ischen\\s+Kommission)", "pages": ["any"], "law": "VO (EU) 2024/3228 (Aufhebung VO (EU) 524/2013; Plattform eingestellt 20.07.2025)", "severity": "WARN", "note": "Veralteter OS-Link/OS-Hinweis; entfernen. Irreführungsrisiko nach UWG (→ pruefen)." },
+    { "id": "werbung-unsachlich", "regex": "garantiert\\w*\\s+(Steuerersparnis|Steuerr(ü|ue)ckerstattung|R(ü|ue)ckerstattung)|(Steuern|Steuer)\\s+sparen\\s+garantiert|(beste[rs]?|g(ü|ue)nstigste[rs]?|billigste[rs]?)\\s+Steuerberater|Nr\\.?\\s?1\\s+(Steuerberater|Steuerkanzlei)|Testsieger", "pages": ["any"], "law": "StBerG § 57 Abs. 1, § 57a; BOStB § 9 Abs. 1", "severity": "WARN", "note": "Werbung nur, soweit sie in Form und Inhalt sachlich unterrichtet; Erfolgsgarantien, Superlative und Alleinstellungsbehauptungen ohne Beleg sind berufswidrig/wettbewerbswidrig." },
+    { "id": "fachberater-unverliehen", "regex": "Fachberater(in)?\\s+f(ü|ue)r\\s+(?!Internationales\\s+Steuerrecht|Z(ö|oe)lle\\s+und\\s+Verbrauchsteuern)(?![^\\n]{0,120}DStV)", "pages": ["any"], "law": "StBerG § 43 Abs. 2; BOStB § 9 Abs. 2, § 29 + Fachberaterordnung § 1", "severity": "WARN", "note": "Kammer-verliehene Fachberater nur 'für Internationales Steuerrecht' und 'für Zölle und Verbrauchsteuern'. Andere Fachberater-Titel (z. B. DStV e.V.) nur mit Herkunftszusatz und räumlich getrennt von Name + 'Steuerberater'." },
+    { "id": "lohnsteuerhilfeverein-ohne-befugnishinweis", "regex": "Lohnsteuerhilfeverein(?![\\s\\S]{0,1200}(Befugnis|§\\s*4\\s*(Abs\\.|StBerG)|Mitglieder|Einkommensteuer))", "pages": ["any"], "law": "StBerG § 4 (Umfang der Befugnis: Hilfe für Mitglieder, nur Einkommensteuer + Zuschlagsteuern), § 8 Abs. 1–3 (sachliche Werbung, Hinweis nur im Rahmen der Befugnis), § 27 (Aufsicht OFD/Landesfinanzbehörde)", "severity": "WARN", "note": "Variante Lohnsteuerhilfeverein: Nennung des Vereins ohne Hinweis auf die beschränkte Beratungsbefugnis (Mitglieder, Einkommensteuer). Impressum dort: Aufsichtsbehörde = OFD/Landesfinanzbehörde statt Kammer; Haftpflicht § 25 StBerG." },
+    { "id": "buchhalter-unbefugte-leistung", "regex": "(Buchhalter|Buchhaltungsb(ü|ue)ro|Buchhaltungsservice)[\\s\\S]{0,250}?(Steuererkl(ä|ae)rung|Steuerberatung|Jahresabschl(ü|ue)ss?e?\\b|Umsatzsteuer-?Voranmeldung)", "pages": ["any"], "law": "StBerG § 5 Abs. 1, § 6 Abs. 1 Nr. 1, § 8 Abs. 4", "severity": "WARN", "note": "Variante Buchhalter: darf nur 'Buchen laufender Geschäftsvorfälle, Kontenpläne, laufende Lohnabrechnung, Lohnsteuer-Anmeldung' bewerben; Steuererklärungen/Jahresabschluss/UStVA sind Steuerberatern vorbehalten. Auf Steuerberater-Websites (eigene Buchhalter im Team) ist ein Treffer unkritisch." }
+  ],
+  "manual": [
+    "Kammer-Anschrift vollständig (Straße, PLZ, Ort) und die richtige Kammer (Bezirk der beruflichen Niederlassung, § 40 Abs. 1 StBerG) — Regex prüft nur das Wort.",
+    "Versicherer-Name + Anschrift real und aktuell; Deckung ≥ 250.000 € je Versicherungsfall (DVStB § 52), Gesellschaften höher.",
+    "Steuerberatungsgesellschaft: Anerkennungsurkunde der Kammer (§ 53) vorhanden; Bezeichnung nur bei Mehrheit StB in Stimmrechten + Geschäftsführung (§ 55g).",
+    "Vergütungsvereinbarungen ab 01.01.2026: Textform, als solche bezeichnet, getrennt von anderen Vereinbarungen, nicht in der Vollmacht (StBVV § 4 Abs. 1); Hinweis nach Abs. 3 in Textform belegbar.",
+    "Online-Mandatsabschluss mit Verbrauchern: Widerrufsbelehrung + Muster-Widerrufsformular + Zustimmung zum vorzeitigen Beginn; ohne Belehrung Frist 12 Monate + 14 Tage (§ 356 Abs. 3 BGB → pruefen).",
+    "Kontaktformular: TLS, keine Pflichtfelder für Steuer-ID/Einkommen, Hinweis auf Verschwiegenheit (§ 57 Abs. 1 StBerG); Dokumenten-Upload nur über verschlüsseltes Mandantenportal.",
+    "Datenschutzerklärung: Auftragsverarbeiter (DATEV, Hosting, Cloud) mit AVV; Löschfristen (10 Jahre Handakten § 66 StBerG → pruefen); Art. 13/14 vollständig.",
+    "Werbeauftritt gesamt: Bewertungen, Google-Ads, Vergleichsportale und Erfolgsclaims auf Sachlichkeit (§ 57a StBerG, BOStB § 9) prüfen — kein Regex deckt Bild/Video/Anzeigen.",
+    "Mitarbeiterzahl per 31.12. Vorjahr feststellen: > 10 → VSBG-§-36-Erklärung Pflicht."
+  ],
+  "pruefen": [
+    "StBerG wurde auf gesetze-im-internet neu nummeriert (Stand: zuletzt geändert durch Art. 1 G v. 29.06.2026): Lohnsteuerhilfevereine jetzt § 4 mit Absätzen (früher § 4 Nr. 11), Buchhalter § 6 Abs. 1 Nr. 1 (früher § 6 Nr. 4). Zitierweise in Impressum-Mustern/Kammerhinweisen abgleichen.",
+    "BOStB-Fassung 01.08.2022 (Beschluss 03.05.2022) laut bstbk.de; ob 2025/2026 eine Neufassung beschlossen wurde (Folge der StBerG-Novelle), bei BStBK bestätigen.",
+    "DL-InfoV § 4 (Preisangaben auf Anfrage / Berechnungsweise) nicht verifiziert — ob eine Website-Pflicht zur Honorarinformation über StBVV-Hinweis hinaus besteht, klären.",
+    "StBVV-Änderungen zum 01.01.2026 (Textform-Neufassung § 4) stammen aus Sekundärquellen (buzer.de, stbk-hessen); Verkündungsfundstelle im BGBl. nachholen.",
+    "OS-Plattform-Resthinweis: Einordnung als irreführende geschäftliche Handlung § 5 UWG / § 5a UWG — Abmahnrisiko-Bewertung durch Anwalt.",
+    "Verschwiegenheit: § 203 Abs. 1 StGB (Steuerberater als Berufsgeheimnisträger) nicht aus Primärquelle verifiziert; Nummer prüfen bevor sie in Datenschutztexte übernommen wird.",
+    "Widerruf: Anwendbarkeit von § 312g BGB auf Steuerberatungsverträge ist Kammer-/Verlagsmeinung (DWS-Muster), kein Ausschluss in § 312g Abs. 2 gefunden; § 312 Abs. 2 Ausnahmen (Notar u. a.) gegenprüfen.",
+    "Lohnsteuerhilfeverein: Pflichtangaben-Katalog fürs Impressum (Anerkennungsnummer, Aufsichtsbehörde OFD gem. § 27, Beratungsstellenleiter) nur aus § 27/§ 25 abgeleitet; BVL/OFD-Merkblatt einholen.",
+    "Buchhalter-Variante: Hinweis auf § 6-Befugnis muss nach § 8 Abs. 4 wörtlich die erlaubten Tätigkeiten nennen? Rechtsprechung (BGH) zur Werbung mit 'Buchhalter' prüfen.",
+    "Handakten-Aufbewahrung 10 Jahre (§ 66 StBerG) für Löschfristen in der Datenschutzerklärung — Paragraf nach Neunummerierung verifizieren."
+  ]
+}

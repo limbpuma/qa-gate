@@ -1,0 +1,75 @@
+{
+  "sector": "handwerk",
+  "title": "Handwerksbetrieb",
+  "reviewedAt": "2026-09-05",
+  "sources": [
+    "https://www.gesetze-im-internet.de/ddg/__5.html",
+    "https://www.gesetze-im-internet.de/dlinfov/__2.html",
+    "https://www.gesetze-im-internet.de/dlinfov/__4.html",
+    "https://www.gesetze-im-internet.de/pangv_2022/__2.html",
+    "https://www.gesetze-im-internet.de/pangv_2022/__3.html",
+    "https://www.gesetze-im-internet.de/pangv_2022/__12.html",
+    "https://www.gesetze-im-internet.de/bgb/__312b.html",
+    "https://www.gesetze-im-internet.de/bgb/__312g.html",
+    "https://www.gesetze-im-internet.de/bgb/__357a.html",
+    "https://www.gesetze-im-internet.de/bgb/__634a.html",
+    "https://www.gesetze-im-internet.de/vsbg/__36.html",
+    "https://www.gesetze-im-internet.de/hwo/__1.html",
+    "https://www.gesetze-im-internet.de/hwo/__51.html",
+    "https://www.gesetze-im-internet.de/hwo/__117.html",
+    "https://www.gesetze-im-internet.de/uwg_2004/__5.html",
+    "https://www.gesetze-im-internet.de/nav/__13.html",
+    "https://www.gesetze-im-internet.de/ndav/__13.html",
+    "https://www.gesetze-im-internet.de/schfhwg/__2.html",
+    "https://dejure.org/gesetze/EGBGB/246a.html",
+    "https://www.zdh.de/ueber-uns/fachbereich-organisation-und-recht/praxis-recht-/-leitfaeden/praxis-recht-impressumspflicht/",
+    "https://www.hwk-koeln.de/artikel/impressumspflicht-bei-webseiten-32,0,940.html",
+    "https://www.e-recht24.de/impressum/13197-impressum-handwerker.html",
+    "https://www.it-recht-kanzlei.de/entfernung-informationen-os-plattform.html",
+    "https://www.deutsche-handwerks-zeitung.de/os-plattform-impressum-agb-juli-2025-363616/",
+    "https://www.caspers-mock.de/publikationen/pflichten_os_plattform_webseite_entfallen_7_2025.htm",
+    "https://www.rueden.de/blog/wettbewerbsrecht/der-meisterzwang-und-das-uwg/"
+  ],
+  "impressumPatterns": [
+    { "id": "handwerkskammer", "regex": "Handwerkskammer|\\bHWK\\b|Kammerzugeh(ö|oe)rigkeit", "law": "DDG § 5 Abs. 1 Nr. 5 lit. a; DL-InfoV § 2 Abs. 1 Nr. 6", "severity": "WARN", "note": "Kammer is mandatory for reglementierte Berufe. ZDH/HWK Köln treat it as mandatory for Gesundheitshandwerke and recommended for other Anlage-A trades; eRecht24 treats it as mandatory for all. Hence WARN, see pruefen." },
+    { "id": "berufsbezeichnung", "regex": "Berufsbezeichnung|Handwerksrolle|Betriebsnummer|verliehen in", "law": "DDG § 5 Abs. 1 Nr. 5 lit. b; DL-InfoV § 2 Abs. 1 Nr. 6", "severity": "WARN", "note": "gesetzliche Berufsbezeichnung plus the state that awarded it (Deutschland). Handwerksrolle/Betriebsnummer is the usual way HWK templates phrase it." },
+    { "id": "berufsrecht-hwo", "regex": "Handwerksordnung|\\bHwO\\b|berufsrechtliche(n)? Regelung", "law": "DDG § 5 Abs. 1 Nr. 5 lit. c", "severity": "WARN", "note": "Name of the berufsrechtliche Regelung (HwO) and how it is accessible; HWK templates name the HwO and link gesetze-im-internet.de." }
+  ],
+  "statements": [
+    { "id": "berufshaftpflicht", "regex": "Berufshaftpflicht|Betriebshaftpflicht|Haftpflichtversicher", "pages": ["impressum", "agb", "any"], "law": "DL-InfoV § 2 Abs. 1 Nr. 11", "severity": "WARN", "note": "Only if a Berufshaftpflichtversicherung exists: insurer name, address and räumlicher Geltungsbereich. May also be given via offer/PDF (§ 2 Abs. 2 DL-InfoV), so absence on the site alone is not a violation." },
+    { "id": "vsbg-hinweis", "regex": "Verbraucherschlichtungsstelle|Streitbeilegung|Streitschlichtung|Schlichtungsstelle|Schlichtungsverfahren", "pages": ["impressum", "agb"], "law": "VSBG § 36 Abs. 1 Nr. 1, Abs. 2", "severity": "WARN", "note": "Statement whether the business is willing/obliged to take part in Verbraucherschlichtung, on the website or with the AGB. Exempt with <= 10 employees on 31.12. of the previous year (§ 36 Abs. 3), which the gate cannot verify. Frequent Abmahnung subject for larger Betriebe." },
+    { "id": "widerruf", "regex": "Widerruf", "pages": ["agb", "any"], "law": "BGB § 312b Abs. 1, § 312g Abs. 1, § 357a; Art. 246a § 1 Abs. 2 S. 1 Nr. 1 und 3 EGBGB", "severity": "WARN", "note": "Consumers get a 14-day Widerrufsrecht for contracts closed online or at their home (Vor-Ort-Auftrag). Without correct Belehrung the period never starts and Wertersatz for work already done is lost (§ 357a). Exception only for expressly requested urgent repairs (§ 312g Abs. 2 Nr. 11)." },
+    { "id": "gewaehrleistung", "regex": "Gew(ä|ae)hrleistung|M(ä|ae)ngelanspr|M(ä|ae)ngelhaftung|Sachmangel", "pages": ["agb", "any"], "law": "Art. 246a § 1 Abs. 1 S. 1 Nr. 9 EGBGB; BGB § 634a Abs. 1 (2 Jahre Werk / 5 Jahre Bauwerk)", "severity": "WARN", "note": "Hint that gesetzliche Mängelhaftung exists is part of the pre-contract information for distance/off-premises contracts; statutory periods must not be shortened towards consumers." },
+    { "id": "preis-brutto", "regex": "inkl\\.?\\s*(MwSt|USt|Mehrwertsteuer|Umsatzsteuer)|inklusive\\s+(MwSt|Mehrwertsteuer|Umsatzsteuer)|Bruttopreis|Endpreis", "pages": ["any"], "law": "PAngV § 3 Abs. 1, § 2 Nr. 3", "severity": "WARN", "note": "Prices shown to consumers (Stundensatz, Anfahrtspauschale) must be Gesamtpreise incl. USt. Only relevant when the page shows amounts; the gate cannot condition on that, hence WARN." }
+  ],
+  "requiredLinks": [
+    { "id": "hwo", "hrefRegex": "gesetze-im-internet\\.de/hwo", "law": "DDG § 5 Abs. 1 Nr. 5 lit. c", "severity": "WARN", "note": "berufsrechtliche Regelungen must be accessible; a link to the HwO on gesetze-im-internet.de is the accepted way (HWK Köln template)." }
+  ],
+  "forbiddenWords": [
+    { "id": "os-plattform", "regex": "ec\\.europa\\.eu/consumers/odr|OS-Plattform|Online-Streitbeilegungsplattform|Plattform zur Online-Streitbeilegung", "pages": ["any"], "law": "Verordnung (EU) 2024/3228 (Aufhebung VO (EU) Nr. 524/2013, wirksam 20.07.2025); UWG § 5 Abs. 1", "severity": "FAIL", "note": "The EU ODR platform was shut down on 20.07.2025; keeping the hint/link misleads consumers and is an active Abmahnung subject. The VSBG § 36 statement stays mandatory." },
+    { "id": "meister-claim", "regex": "Meisterbetrieb|Meisterhand|Meisterqualit(ä|ae)t|vom Meister|Meisterwerkstatt", "pages": ["any"], "law": "UWG § 5 Abs. 1, Abs. 2 Nr. 3; HwO § 51 Abs. 1", "severity": "WARN", "note": "Allowed only when the Inhaber/Betriebsleiter passed the Meisterprüfung in that trade (title is personal, HwO § 51). The gate cannot verify, hence WARN; false use is a classic Abmahnung." },
+    { "id": "innung-claim", "regex": "Innungs(fach)?betrieb|Innungsmitglied|Mitglied (der|im|in der) [^.]{0,40}Innung", "pages": ["any"], "law": "UWG § 5 Abs. 2 Nr. 3", "severity": "WARN", "note": "Membership claims (Innung, Fachverband) must be true and current; verify against the Innung register." },
+    { "id": "netto-preis", "regex": "zzgl\\.?\\s*(MwSt|USt|Mehrwertsteuer|Umsatzsteuer)|Nettopreis|zuz(ü|ue)glich (MwSt|Mehrwertsteuer|Umsatzsteuer)|exkl\\.?\\s*(MwSt|USt)", "pages": ["any"], "law": "PAngV § 3 Abs. 1, § 2 Nr. 3; UWG § 5 Abs. 2 Nr. 2", "severity": "WARN", "note": "Net prices towards consumers violate the Gesamtpreis duty. WARN because a mixed B2B/B2C site may legitimately show net prices in a clearly B2B-only section." },
+    { "id": "garantie-claim", "regex": "\\d+\\s*Jahre?n?\\s*Garantie|Garantie auf|lebenslange Garantie|Herstellergarantie|Garantieversprechen", "pages": ["any"], "law": "UWG § 5 Abs. 2 Nr. 7; BGB § 443", "severity": "WARN", "note": "A Garantie is a voluntary promise beyond Gewährleistung and needs stated conditions (scope, duration, who guarantees). Vague Garantie claims mislead; must not be confused with the statutory Mängelhaftung." }
+  ],
+  "manual": [
+    "Anlage-A trade (Maler, Elektro, SHK, Dachdecker, Tischler...) requires Handwerksrolle entry before operating/advertising (HwO § 1 Abs. 1; Bußgeld bis 10.000 EUR, § 117). Check the HWK Betriebsnummer.",
+    "Aufsichtsbehörde (DDG § 5 Abs. 1 Nr. 3) only where a behördliche Zulassung is needed: in Handwerk essentially bevollmächtigte Bezirksschornsteinfeger and Büchsenmacher (ZDH). Schornsteinfegerarbeiten only by Betriebe in the Handwerksrolle (SchfHwG § 2 Abs. 1).",
+    "Elektro: work behind the Hausanschlusssicherung only by a company entered in a Netzbetreiber Installateurverzeichnis (NAV § 13 Abs. 2). Gas/SHK: same for Gasanlagen (NDAV § 13 Abs. 2). Any 'eingetragener Installateur' claim must be true.",
+    "Vor-Ort-Aufträge and online orders: hand over Widerrufsbelehrung + Muster-Widerrufsformular and obtain the consumer's express request to start early, otherwise no Wertersatz (§ 357a BGB, Art. 246a § 1 Abs. 2 EGBGB). Exception § 312g Abs. 2 Nr. 11 only for urgent repairs the customer explicitly asked for.",
+    "VSBG: count employees on 31.12. of the previous year; > 10 employees makes the § 36 Abs. 1 Nr. 1 statement mandatory. Name the Schlichtungsstelle if the Betrieb is willing/obliged (§ 36 Abs. 1 Nr. 2).",
+    "DL-InfoV information (§ 2 Abs. 1 Nr. 1-11) may be given via offer/Kostenvoranschlag instead of the website (§ 2 Abs. 2). DL-InfoV § 4 price duties do not apply towards consumers (§ 4 Abs. 2); PAngV governs.",
+    "PAngV § 12 Abs. 1: a Preisverzeichnis for wesentliche Leistungen or Verrechnungssätze (Stundensatz incl. USt) must be displayed in the Geschäftsräume unless work is only offered via individual written Angebot/Kostenvoranschlag (§ 12 Abs. 4 Nr. 1).",
+    "Meister wording: title is personal (HwO § 51 Abs. 1). 'Meisterbetrieb' only if the person running the Betrieb holds the Meisterprüfung for that trade; check Betriebsleiter and Handwerksrolle entry.",
+    "AGB clauses shortening Gewährleistung below BGB § 634a periods or excluding Widerruf are void towards consumers; review AGB with the HWK Rechtsberatung."
+  ],
+  "pruefen": [
+    "Whether every Anlage-A Handwerk is a 'reglementierter Beruf' under DDG § 5 Abs. 1 Nr. 5 (reference to RL 89/48/EWG, 92/51/EWG). ZDH and HWK Köln make Kammer/Berufsbezeichnung/HwO mandatory only for Gesundheitshandwerke and recommend it otherwise; eRecht24 says mandatory for all Handwerker. Pack uses WARN; lawyer to decide FAIL vs WARN.",
+    "OLG Düsseldorf decision on 'Meisterbetrieb' cited in press without Aktenzeichen; rueden.de cites OLG Frankfurt 09.12.2009, 6 U 178/08 (advertising without Handwerksrolle was NOT held misleading on appeal). Confirm current case law before escalating meister-claim to FAIL.",
+    "Art. 246a § 1 EGBGB numbering (Abs. 1 S. 1 Nr. 9 Gewährleistung; Abs. 2 S. 1 Nr. 1 und 3) taken from dejure.org (version effective 19.06.2026), gesetze-im-internet URL returned 404; verify verbatim.",
+    "Whether 'netto'/'zzgl. MwSt' on a mixed-audience Handwerk site is a PAngV violation depends on whether the offer is addressed to consumers (PAngV § 1 Abs. 1); no Handwerk-specific ruling verified.",
+    "HWK Betriebsnummer in the Impressum: no statutory duty found, only HWK template practice; pattern 'berufsbezeichnung' accepts it as an alternative wording.",
+    "PAngV § 12 Abs. 1 Sätze 2-4 (Stundensatz/Kilometersatz incl. USt) summarized from gesetze-im-internet, not quoted verbatim; verify exact text.",
+    "VSBG § 36 Abs. 3 headcount exemption: confirm whether Auszubildende and Teilzeitkräfte count as 'Personen' for the 10-employee threshold."
+  ]
+}
