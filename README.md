@@ -64,7 +64,7 @@ image builds. The browser toolchain (Playwright, axe, Lighthouse) installs itsel
 Always the same block, at most 25 lines:
 
 ```
-QA-GATE pr · softki-de · portfolio-demo · 2026-09-05T10:40 · 97s · FAIL
+QA-GATE pr · example-shop · portfolio-demo · 2026-09-05T10:40 · 97s · FAIL
 PASS  typecheck@go   build+vet ok                                 32s
 PASS  unit@go        ok                                           21s
 WARN  semgrep        0 error / 27 warning → qa-report/semgrep.json   33s
@@ -157,6 +157,22 @@ in `AGENTS.md`: run `pr`, paste the summary block, never touch the gate's config
 - **Can an agent switch checks off?** Not silently. Configuration changes on a branch fail `gate-config`, and
   every SKIP names its reason in the report.
 
+## Not legal advice, and where the human stays responsible
+
+qa-gate proves that legal elements are present, technically sound and dated. It does not judge the wording of an
+Impressum, AGB or Datenschutzerklärung, it cannot know the facts of your business, and laws change. Every rule
+names the statute it comes from; every sector pack ends with `manual` (duties no tool can verify) and `pruefen`
+(open questions for a lawyer). **For a real deployment, a client contract or a regulated profession — especially in
+the German market, which is strict and case-specific — consult a lawyer specialised in IT, competition and
+data-protection law.** The AI features here are proposals for a human to review; they never produce a verdict, and
+the person or agent who runs the gate remains responsible for what ships.
+
+## License
+
+PolyForm Noncommercial 1.0.0 — see [LICENSE](LICENSE). You may use, copy, modify and share qa-gate for
+noncommercial purposes; commercial use needs written permission from the copyright holder. Third-party components
+and their licences are listed in [NOTICE](NOTICE).
+
 ---
 
 # Reference
@@ -212,7 +228,7 @@ A Docker-based check with Docker stopped is FAIL (reason in the summary); `--no-
 ## Summary block (stdout)
 
 ```
-QA-GATE pr · food-pizza · 2026-09-02T14:03 · 212s · FAIL
+QA-GATE pr · example-shop · 2026-09-02T14:03 · 212s · FAIL
 PASS  typecheck      ok                                                          12s
 PASS  coverage       84.1% (ratchet 83.9%, min 80%)                              48s
 FAIL  semgrep        2 error / 7 warning → qa-report/semgrep.json                 77s
@@ -229,7 +245,7 @@ Everything else (tool output, debug) is in the log file, never on stdout.
 `qa-report/gate-<stage>-<timestamp>.json` plus a stable copy `qa-report/gate-<stage>-latest.json`:
 
 ```json
-{ "schema": 1, "stage": "pr", "repo": "food-pizza", "stack": ["node"], "verdict": "FAIL",
+{ "schema": 1, "stage": "pr", "repo": "example-shop", "stack": ["node"], "verdict": "FAIL",
   "startedAt": "2026-09-02T14:03:10+0200", "durationSec": 212, "configHash": "sha256:…", "baseRef": "master",
   "checks": [ { "id": "semgrep", "status": "FAIL", "blocking": true, "durationSec": 77,
                 "summary": "2 error / 7 warning → qa-report/semgrep.json", "count": { "error": 2, "warning": 7 },

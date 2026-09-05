@@ -1,0 +1,36 @@
+qa-gate — NOTICE
+
+Copyright Limber Martinez (https://github.com/limbpuma)
+Licensed under the PolyForm Noncommercial License 1.0.0 — see LICENSE.
+Commercial use requires a separate written permission from the copyright holder.
+
+NOT LEGAL ADVICE
+----------------
+qa-gate automates checks for the presence, technical behaviour and dates of legal requirements that apply to
+websites and software in Germany and the EU (DSGVO, TTDSG, DDG, BFSG, KI-VO/AI Act, PAngV, VSBG and the
+profession-specific rules in the sector packs). It does not assess the legal quality of texts, it cannot know the
+facts of a concrete business, and laws, court decisions and authority guidance change. Every rule carries the
+source it was derived from and every sector pack lists the open questions ("pruefen") a lawyer must settle.
+Before relying on a result for a real deployment, a client contract or a regulated profession, consult a lawyer
+specialised in German IT, competition and data-protection law. The AI features of qa-gate (configuration
+suggestions, legal-rule drafts, triage) are proposals for a human to review; they never produce a verdict.
+
+THIRD-PARTY COMPONENTS
+----------------------
+qa-gate downloads or invokes the following components at runtime. Each stays under its own licence; none is
+redistributed with this repository.
+
+- Playwright (Microsoft) — Apache-2.0 — https://github.com/microsoft/playwright
+- axe-core and @axe-core/playwright (Deque Systems) — MPL-2.0 — https://github.com/dequelabs/axe-core
+- Lighthouse and Lighthouse CI (Google) — Apache-2.0 — https://github.com/GoogleChrome/lighthouse-ci
+- Pa11y — LGPL-3.0 — https://github.com/pa11y/pa11y (used as an external command)
+- Semgrep OSS (Semgrep, Inc.) — LGPL-2.1 — executed as a Docker image; community rulesets under their own terms
+- Trivy (Aqua Security) — Apache-2.0 — executed as a Docker image
+- Nuclei (ProjectDiscovery) — MIT — executed as a Docker image; templates under their own terms
+- Node.js — MIT-style licence — https://nodejs.org
+
+LEGAL SOURCES
+-------------
+Statutes quoted in the rule registry and the sector packs are taken from gesetze-im-internet.de (Bundesamt für
+Justiz), EUR-Lex, and the publications of the competent Kammern and authorities. German federal statutes are not
+subject to copyright (§ 5 UrhG); quotations from other sources are referenced by URL in each rule.
