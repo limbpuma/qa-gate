@@ -1,7 +1,7 @@
-# .github/workflows/qa-gate.yml — runs the global quality gate on every push and PR.
-# No secrets needed: the gate is fetched from the public repo limbpuma/qa-gate at a pinned release tag, the same
-# code every developer runs locally from ~/.claude/scripts/qa-gate. The workflow never calls an LLM.
-# Supply chain: every action is pinned to a commit SHA (comment = the tag it was resolved from).
+# .github/workflows/qa-gate.yml — the global quality gate on every push and PR, via the published Action.
+# No secrets needed: `uses: limbpuma/qa-gate@<tag>` checks out the same code every developer runs locally from
+# ~/.claude/scripts/qa-gate; bump the tag together with `gateVersion` in qa-gate.config.json (`qa-gate.sh update`).
+# Supply chain: third-party actions pinned to a commit SHA (comment = the tag it was resolved from).
 name: qa-gate
 
 on:
@@ -12,12 +12,10 @@ on:
     - cron: '17 6 1 * *' # monthly live compliance drift check (needs the LIVE_URL repository variable)
   workflow_dispatch:
 
-# Why: the default GITHUB_TOKEN can write to the repo; the gate only reads the checkout and uploads artifacts.
+# Why: the gate only reads the checkout; security-events lets it publish its SARIF to the Security tab.
 permissions:
   contents: read
-
-env:
-  QA_GATE_VERSION: v0.2.0
+  security-events: write
 
 jobs:
   gate:
@@ -28,11 +26,7 @@ jobs:
         with:
           fetch-depth: 0 # gate-config and the Semgrep changed-files scope compare against the base branch
 
-      - name: Fetch qa-gate (pinned release)
-        run: |
-          git clone --depth 1 --branch "$QA_GATE_VERSION" https://github.com/limbpuma/qa-gate.git "$HOME/qa-gate"
-          echo "QA_GATE_HOME=$HOME/qa-gate" >> "$GITHUB_ENV"
-
+      # The project's own toolchain (its tests run inside the gate); remove the blocks that do not apply.
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
@@ -48,7 +42,6 @@ jobs:
         if: hashFiles('pyproject.toml') != ''
         with:
           python-version: '3.12'
-
       - name: Install project dependencies
         run: |
           if [ -f pnpm-lock.yaml ]; then pnpm install --frozen-lockfile; fi
@@ -56,12 +49,27 @@ jobs:
           if [ -f pyproject.toml ]; then pip install -e . ruff pytest pytest-cov pip-audit; fi
           if [ -f go.mod ]; then go install golang.org/x/vuln/cmd/govulncheck@latest; fi
 
-      - name: Gate — pr (Docker is available on ubuntu runners)
-        run: bash "$QA_GATE_HOME/qa-gate.sh" pr --repo "$GITHUB_WORKSPACE"
+      - name: Gate — pr
+        id: pr
+        uses: limbpuma/qa-gate@v0.6.0
+        with:
+          stage: pr
 
       - name: Gate — build
         if: hashFiles('Dockerfile', 'apps/*/Dockerfile') != ''
-        run: bash "$QA_GATE_HOME/qa-gate.sh" build --repo "$GITHUB_WORKSPACE"
+        uses: limbpuma/qa-gate@v0.6.0
+        with:
+          stage: build
+
+      - name: Publish SARIF to code scanning
+        # Free on public repos; a private repo without GitHub Advanced Security rejects the upload, so the step
+        # never fails the job — the SARIF file is still in the artifact below.
+        if: always() && hashFiles('qa-report/gate-pr.sarif') != ''
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@6f5948dfacef28e207b48d0905cf90c03365536d # v3.37.9
+        with:
+          sarif_file: qa-report/gate-pr.sarif
+          category: qa-gate/pr
 
       - name: Upload gate reports
         if: always()
@@ -70,6 +78,7 @@ jobs:
           name: qa-report
           path: |
             qa-report/*.json
+            qa-report/*.sarif
             qa-report/*.md
             qa-report/_logs/*.log
           retention-days: 14
@@ -79,22 +88,16 @@ jobs:
     if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && vars.LIVE_URL != ''
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    env:
-      LIVE_URL: ${{ vars.LIVE_URL }} # passed through env, never interpolated into a shell line
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
-      - name: Fetch qa-gate (pinned release) + browser toolchain
-        run: |
-          git clone --depth 1 --branch "$QA_GATE_VERSION" https://github.com/limbpuma/qa-gate.git "$HOME/qa-gate"
-          cd "$HOME/qa-gate" && npm install --silent --no-audit --no-fund && npx playwright install --with-deps chromium
-          echo "QA_GATE_HOME=$HOME/qa-gate" >> "$GITHUB_ENV"
       - name: Compliance against the live site
-        run: |
-          case "$LIVE_URL" in https://*) ;; *) echo "LIVE_URL must be an https URL"; exit 1 ;; esac
-          bash "$QA_GATE_HOME/qa-gate.sh" compliance --repo "$GITHUB_WORKSPACE" --base-url "$LIVE_URL"
+        uses: limbpuma/qa-gate@v0.6.0
+        with:
+          stage: compliance
+          base-url: ${{ vars.LIVE_URL }} # validated as https inside the action; never interpolated into a shell line
       - name: Upload evidence bundle
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -104,4 +107,5 @@ jobs:
             qa-report/compliance-*.md
             qa-report/compliance-scan.json
             qa-report/axe.json
+            qa-report/gate-compliance.sarif
           retention-days: 400

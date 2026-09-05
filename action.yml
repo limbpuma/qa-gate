@@ -1,0 +1,96 @@
+name: qa-gate
+description: >-
+  Deterministic quality gate with German/EU compliance (tests, secrets, Semgrep, Trivy, accessibility, legal rules,
+  sector packs). Same script as ~/.claude/scripts/qa-gate on a developer machine. No LLM, no secrets required.
+author: Limber Martinez
+branding:
+  icon: shield
+  color: gray-dark
+
+inputs:
+  stage:
+    description: pre-commit | pr | build | staging | compliance | all
+    required: false
+    default: pr
+  profile:
+    description: sandbox | portfolio-demo | mvp-client | production (empty = the repo's qa-gate.config.json / DEPLOY_PROFILE)
+    required: false
+    default: ''
+  base-url:
+    description: https URL of a LIVE site for staging/compliance (nothing is started or stopped; evidence marked live)
+    required: false
+    default: ''
+  no-docker:
+    description: "'true' turns Docker-based checks into SKIP instead of FAIL (never for a client project)"
+    required: false
+    default: 'false'
+  repo:
+    description: path of the repository to gate
+    required: false
+    default: ${{ github.workspace }}
+
+outputs:
+  verdict:
+    description: PASS or FAIL
+    value: ${{ steps.gate.outputs.verdict }}
+  json:
+    description: repo-relative path of the JSON verdict
+    value: ${{ steps.gate.outputs.json }}
+  sarif:
+    description: repo-relative path of the SARIF file
+    value: ${{ steps.gate.outputs.sarif }}
+
+runs:
+  using: composite
+  steps:
+    - name: Browser toolchain (staging, compliance, all)
+      # Why here and not in the caller: the toolchain belongs to the gate's own package-lock, pinned with the action.
+      if: inputs.stage == 'staging' || inputs.stage == 'compliance' || inputs.stage == 'all'
+      shell: bash
+      run: |
+        cd "$GITHUB_ACTION_PATH"
+        npm ci --silent --no-audit --no-fund
+        npx playwright install --with-deps chromium
+        npm install -g --silent pa11y
+
+    - name: Run qa-gate
+      id: gate
+      shell: bash
+      # Why env and not ${{ }} inside the script: inputs are user-controlled text; interpolating them into a shell
+      # line is a command-injection path. Values arrive as environment variables and are validated below.
+      env:
+        INPUT_STAGE: ${{ inputs.stage }}
+        INPUT_PROFILE: ${{ inputs.profile }}
+        INPUT_BASE_URL: ${{ inputs.base-url }}
+        INPUT_NO_DOCKER: ${{ inputs.no-docker }}
+        INPUT_REPO: ${{ inputs.repo }}
+      run: |
+        set -euo pipefail
+        case "$INPUT_STAGE" in pre-commit|pr|build|staging|compliance|all) ;; *) echo "::error::stage must be pre-commit|pr|build|staging|compliance|all"; exit 3 ;; esac
+        args=("$INPUT_STAGE" --repo "$INPUT_REPO")
+        if [[ -n "$INPUT_PROFILE" ]]; then
+          case "$INPUT_PROFILE" in sandbox|portfolio-demo|mvp-client|production) args+=(--profile "$INPUT_PROFILE") ;; *) echo "::error::unknown profile"; exit 3 ;; esac
+        fi
+        if [[ -n "$INPUT_BASE_URL" ]]; then
+          case "$INPUT_BASE_URL" in https://*) args+=(--base-url "$INPUT_BASE_URL") ;; *) echo "::error::base-url must be an https URL"; exit 3 ;; esac
+        fi
+        if [[ "$INPUT_NO_DOCKER" == "true" ]]; then args+=(--no-docker); fi
+
+        rc=0
+        bash "$GITHUB_ACTION_PATH/qa-gate.sh" "${args[@]}" | tee "$RUNNER_TEMP/qa-gate-summary.txt" || rc=$?
+        # Why the last lines: `all` prints one summary block per stage; the final block carries the verdict.
+        verdict=$(grep '^QA-GATE ' "$RUNNER_TEMP/qa-gate-summary.txt" | tail -1 | awk -F' · ' '{ print $NF }')
+        json=$(awk '/^json[[:space:]]/ { last = $2 } END { print last }' "$RUNNER_TEMP/qa-gate-summary.txt")
+        last_stage=$(grep '^QA-GATE ' "$RUNNER_TEMP/qa-gate-summary.txt" | tail -1 | awk '{ print $2 }')
+        {
+          echo "verdict=${verdict:-FAIL}"
+          echo "json=${json}"
+          echo "sarif=qa-report/gate-${last_stage:-$INPUT_STAGE}.sarif"
+        } >> "$GITHUB_OUTPUT"
+        {
+          echo '### qa-gate'
+          echo '```'
+          cat "$RUNNER_TEMP/qa-gate-summary.txt"
+          echo '```'
+        } >> "$GITHUB_STEP_SUMMARY"
+        exit "$rc"

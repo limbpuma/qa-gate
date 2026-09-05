@@ -46,13 +46,19 @@ print_summary() {
   printf 'log   %s\n' "$(relative_to_repo "$LOG_FILE")"
 }
 
+# SARIF 2.1.0 for GitHub code scanning: qa-report/gate-<stage>.sarif, rebuilt from the latest verdict on every run.
+sarif_write() {
+  SARIF_FILE="$REPO_PATH/$REPORT_DIR/gate-${STAGE}.sarif"
+  node "$LIB_DIR/sarif.js" "$JSON_FILE_LATEST" "$REPO_PATH" "$SARIF_FILE" "$(installed_version)" >>"$LOG_FILE" 2>&1 || log_warn "sarif not written — see log"
+}
+
 # JSON verdict (schema 1) + a stable "-latest.json" copy.
 write_verdict() {
   local records
   records=$(printf '%s\n' "${CHECK_RESULTS[@]}")
   QG_STAGE="$STAGE" QG_REPO="$(basename "$REPO_PATH")" QG_STACK="$STACK_LIST" QG_PROFILE="$PROFILE" \
   QG_VERDICT="$(stage_verdict)" QG_STARTED="$STAGE_STARTED_AT" QG_DURATION="$STAGE_DURATION" \
-  QG_HASH="$CONFIG_HASH" QG_BASE="$BASE_REF" QG_LOG="$(relative_to_repo "$LOG_FILE")" \
+  QG_HASH="$CONFIG_HASH" QG_GATE_VERSION="$(installed_version)" QG_BASE="$BASE_REF" QG_LOG="$(relative_to_repo "$LOG_FILE")" \
   node "$LIB_DIR/json.js" build-verdict <<< "$records" > "$JSON_FILE"
   cp "$JSON_FILE" "$JSON_FILE_LATEST"
 }

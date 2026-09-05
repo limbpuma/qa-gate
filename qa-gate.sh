@@ -10,7 +10,7 @@ readonly QA_GATE_HOME
 readonly LIB_DIR="$QA_GATE_HOME/lib"
 readonly TPL_DIR="$QA_GATE_HOME/templates"
 
-for lib in common detect secrets audit config-guard semgrep trivy stack-node stack-go stack-python ai-register summary init suggest; do
+for lib in common detect secrets audit config-guard waivers version semgrep trivy stack-node stack-go stack-python ai-register summary init suggest; do
   # shellcheck disable=SC1090
   source "$LIB_DIR/$lib.sh"
 done
@@ -30,6 +30,7 @@ qa-gate.sh — global quality gate
 Usage:
   qa-gate.sh <stage> [options]
   qa-gate.sh init [--web] [--repo <path>]
+  qa-gate.sh update [--repo <path>]      pin the installed gate version in qa-gate.config.json (gateVersion)
   qa-gate.sh suggest [--repo <path>]     AI proposes qa-gate.config.json (structure-only digest; never overwrites)
 
 Stages:
@@ -38,6 +39,7 @@ Stages:
 
 Options:
   --repo <path>            target repo (default: git toplevel of cwd)
+  --profile <name>         run as this profile (overrides qa-gate.config.json and DEPLOY_PROFILE)
   --only <id,id,...>       run only these check ids
   --allow-config-change    gate-config differing from the base branch is WARN, not FAIL
   --no-docker              Docker-based checks are SKIP instead of FAIL
@@ -47,6 +49,8 @@ Options:
   --paths <json>           override web.paths for this run (e.g. '["/","/preise"]')
   -h | --help
 
+Accepted risks: "waivers" in qa-gate.config.json ({ check, until, reason, by }) turn a FAIL into a WARN until the date.
+
 Exit codes: 0 PASS · 1 FAIL · 3 usage / internal error
 USAGE
 }
@@ -55,14 +59,16 @@ STAGE=""
 REPO_ARG=""
 BASE_URL_OVERRIDE=""
 PATHS_OVERRIDE=""
+PROFILE_OVERRIDE=""
 INIT_WEB=""
 JSON_ONLY=0
 
 parse_args() {
   while (( $# > 0 )); do
     case "$1" in
-      init|suggest|pre-commit|pr|build|staging|compliance|deploy|all) STAGE="$1"; shift ;;
+      init|update|suggest|pre-commit|pr|build|staging|compliance|deploy|all) STAGE="$1"; shift ;;
       --repo)                REPO_ARG="${2:?--repo needs a path}"; shift 2 ;;
+      --profile)             PROFILE_OVERRIDE="${2:?--profile needs a name}"; shift 2 ;;
       --only)                ONLY_FILTER="${2:?--only needs ids}"; shift 2 ;;
       --allow-config-change) ALLOW_CONFIG_CHANGE=1; shift ;;
       --no-docker)           NO_DOCKER=1; shift ;;
@@ -103,8 +109,18 @@ main() {
   load_config
   detect_stack "$(cfg_get ".stack")"
   resolve_profile
+  if [[ -n "$PROFILE_OVERRIDE" ]]; then PROFILE="$PROFILE_OVERRIDE"; fi
+  if [[ -z "$(cfg_get ".profiles.$PROFILE")" ]]; then
+    printf 'qa-gate: unknown profile "%s" (profiles in qa-gate.config.json: sandbox, portfolio-demo, mvp-client, production)\n' "$PROFILE" >&2
+    exit "$EXIT_USAGE"
+  fi
+  waivers_load
   git_base_ref "$(cfg_get ".git.base")"
 
+  if [[ "$STAGE" == "update" ]]; then
+    update_pin
+    exit $?
+  fi
   if [[ "$STAGE" == "suggest" ]]; then
     STAGE="suggest"; setup_report_paths
     suggest_run; exit $?

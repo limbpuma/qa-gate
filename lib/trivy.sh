@@ -20,6 +20,12 @@ trivy_common_args() {
   printf '%s' "$args"
 }
 
+# Why explicit: Trivy reads .trivyignore from its own working directory, which is not /src inside the container.
+# The file takes CVE ids with an optional expiry ("CVE-2026-1234 exp:2026-12-31"); Trivy counts the id again past the date.
+trivy_ignorefile_arg() {
+  if [[ -f "$REPO_PATH/.trivyignore" ]]; then printf -- '--ignorefile /src/.trivyignore'; fi
+}
+
 # --skip-dirs for build output, dependencies and gate artefacts (.trivyignore only takes CVE ids, not paths).
 trivy_skip_args() {
   node -e 'process.stdout.write(JSON.parse(process.argv[1] || "[]").map((d) => "--skip-dirs " + d).join(" "))' "$(cfg_get ".trivy.skipDirs")"
@@ -63,7 +69,7 @@ trivy_fs_check() {
   rm -f "$REPO_PATH/$TRIVY_FS_REPORT"
   # shellcheck disable=SC2046
   docker_run run --rm -v "${host}:/src" -v "$TRIVY_CACHE_VOLUME:/root/.cache/trivy" "$image" \
-    fs $(trivy_common_args) $(trivy_skip_args) --format json --output "/src/$TRIVY_FS_REPORT" /src >>"$LOG_FILE" 2>&1 || true
+    fs $(trivy_common_args) $(trivy_skip_args) $(trivy_ignorefile_arg) --format json --output "/src/$TRIVY_FS_REPORT" /src >>"$LOG_FILE" 2>&1 || true
   trivy_report_verdict "$TRIVY_FS_REPORT"
 }
 
@@ -76,7 +82,7 @@ trivy_image_check() {
   rm -f "$REPO_PATH/$TRIVY_IMAGE_REPORT"
   # shellcheck disable=SC2046
   docker_run run --rm -v "$DOCKER_SOCKET:$DOCKER_SOCKET" -v "${host}:/src" -v "$TRIVY_CACHE_VOLUME:/root/.cache/trivy" "$image" \
-    image $(trivy_common_args) --format json --output "/src/$TRIVY_IMAGE_REPORT" "$tag" >>"$LOG_FILE" 2>&1 || true
+    image $(trivy_common_args) $(trivy_ignorefile_arg) --format json --output "/src/$TRIVY_IMAGE_REPORT" "$tag" >>"$LOG_FILE" 2>&1 || true
   trivy_report_verdict "$TRIVY_IMAGE_REPORT"
 }
 

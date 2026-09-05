@@ -61,6 +61,31 @@ summary_json_path() { printf '%s\n' "$1" | awk '/^json[[:space:]]/ { print $2; e
 
 json_field() { node -e 'process.stdout.write(String(JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"))[process.argv[2]]))' "$1" "$2"; }
 
+# cfg_set <file> '<js statement over j>' — edits a JSON config in place (test fixtures only).
+cfg_set() {
+  node -e '
+    const fs = require("fs"); const p = process.argv[1];
+    const j = JSON.parse(fs.readFileSync(p, "utf8"));
+    new Function("j", process.argv[2])(j);
+    fs.writeFileSync(p, JSON.stringify(j, null, 2) + "\n");
+  ' "$1" "$2"
+}
+
+installed_gate_version() { tr -d '[:space:]' < "$QA_GATE_HOME/VERSION"; }
+
+# sarif_has <file> <ruleId>: the file is SARIF 2.1.0 with a located result for that rule; exit 1 with a reason otherwise.
+sarif_has() {
+  node -e '
+    const j = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+    const run = j.runs && j.runs[0];
+    if (j.version !== "2.1.0" || !run || run.tool.driver.name !== "qa-gate") { process.stdout.write("not a qa-gate SARIF run"); process.exit(1); }
+    const r = run.results.find((x) => x.ruleId === process.argv[2]);
+    if (!r) { process.stdout.write("no result for " + process.argv[2] + " (have: " + run.results.map((x) => x.ruleId).join(",") + ")"); process.exit(1); }
+    if (!r.locations[0].physicalLocation.artifactLocation.uri) { process.stdout.write("result without location"); process.exit(1); }
+    if (!run.tool.driver.rules.find((x) => x.id === process.argv[2])) { process.stdout.write("rule metadata missing"); process.exit(1); }
+  ' "$1" "$2"
+}
+
 plant_secret_file() {
   local dest="$1" token
   token="github_pat_$(head -c "$FAKE_PAT_BODY_LENGTH" /dev/zero | tr '\0' 'X')"
@@ -109,6 +134,11 @@ test_secrets_detect() {
   grep -qF "$token" <<< "$out" && { fail "$label" "token leaked into summary"; return; }
   log="$dest/$(printf '%s\n' "$out" | awk '/^log[[:space:]]/ { print $2; exit }')"
   [[ -f "$log" ]] && grep -qF "$token" "$log" && { fail "$label" "token leaked into log"; return; }
+  # The finding is also a located SARIF result and a JSON report; neither carries the value.
+  local reason
+  reason=$(sarif_has "$dest/qa-report/gate-pre-commit.sarif" "secrets.GITHUB_TOKEN") || { fail "$label" "sarif: $reason"; return; }
+  grep -qF "$token" "$dest/qa-report/gate-pre-commit.sarif" && { fail "$label" "token leaked into SARIF"; return; }
+  grep -q '"file": "leaked.txt"' "$dest/qa-report/secrets.json" || { fail "$label" "secrets.json lacks the finding"; return; }
   pass "$label"
 }
 
@@ -212,11 +242,7 @@ test_web_compliance_blocks_bad_site() {
   local label="T9.web-bad" dest out
   dest=$(prep_fixture_repo web)
   # The bad variant loads Google Fonts before consent, lacks a reject button, security headers and alt text.
-  node -e '
-    const fs = require("fs"); const p = process.argv[1];
-    const j = JSON.parse(fs.readFileSync(p, "utf8")); j.web.startCommand = "BAD=1 node server.mjs";
-    fs.writeFileSync(p, JSON.stringify(j, null, 2) + "\n");
-  ' "$dest/qa-gate.config.json"
+  cfg_set "$dest/qa-gate.config.json" 'j.web.startCommand = "BAD=1 node server.mjs"; j.waivers = [{ check: "vsbg.odr-link", until: "2099-01-01", reason: "fixture", by: "tests" }]'
   out=$(run_gate "$dest" compliance) && { fail "$label" "bad site did not FAIL"; return; }
   grep -qE '^FAIL[[:space:]]+legal' <<< "$out" || { fail "$label" "legal not FAIL · $(printf '%s' "$out" | head -6)"; return; }
   grep -qE '^FAIL[[:space:]]+axe' <<< "$out" || { fail "$label" "axe not FAIL · $(grep axe <<< "$out")"; return; }
@@ -225,9 +251,20 @@ test_web_compliance_blocks_bad_site() {
     const j = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
     const f = (id) => j.checks.find((c) => c.id === id);
     const failing = ["consent.google-fonts", "consent.banner", "headers.security", "ai.disclosure", "ai.content-label", "ai.datenschutz-provider",
-      "impressum.fields", "vsbg.odr-link", "consent.withdrawal-link", "datenschutz.content", "datenschutz.third-country"].filter((id) => f(id).status !== "FAIL");
+      "impressum.fields", "consent.withdrawal-link", "datenschutz.content", "datenschutz.third-country"].filter((id) => f(id).status !== "FAIL");
     if (failing.length) { process.stdout.write("not FAIL: " + failing.join(", ")); process.exit(1); }
-  ' "$dest/qa-report/compliance-scan.json" || { fail "$label" "expected FAIL on fonts, banner, headers, AI, Impressum fields, ODR link, withdrawal link"; return; }
+    // The waived rule keeps its finding but reports WARN with the owner and the date.
+    const odr = f("vsbg.odr-link");
+    if (odr.status !== "WARN" || !odr.waiver || odr.waiver.by !== "tests" || !/waived until 2099-01-01 by tests/.test(odr.detail)) { process.stdout.write("odr waiver: " + JSON.stringify(odr)); process.exit(1); }
+  ' "$dest/qa-report/compliance-scan.json" || { fail "$label" "expected FAIL on fonts, banner, headers, AI, Impressum fields, withdrawal link and a waived ODR rule"; return; }
+  local reason
+  reason=$(sarif_has "$dest/qa-report/gate-compliance.sarif" "consent.google-fonts") || { fail "$label" "sarif legal: $reason"; return; }
+  node -e '
+    const j = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+    const axe = j.runs[0].results.filter((r) => r.ruleId.startsWith("axe."));
+    const odr = j.runs[0].results.find((r) => r.ruleId === "vsbg.odr-link");
+    if (!axe.length || !odr || odr.level !== "warning" || !odr.properties.waiver) process.exit(1);
+  ' "$dest/qa-report/gate-compliance.sarif" || { fail "$label" "sarif lacks axe results or the waived ODR warning"; return; }
   pass "$label"
 }
 
@@ -318,6 +355,67 @@ test_sector_packs() {
   pass "$label"
 }
 
+test_waivers() {
+  local label="T16.waivers" dest cfg out token
+  dest=$(prep_fixture_repo node)
+  cfg="$dest/qa-gate.config.json"
+  run_gate "$dest" init >/dev/null || { fail "$label" "init failed"; return; }
+  token=$(plant_secret_file "$dest")
+  # A valid waiver turns the blocking FAIL into a WARN that names the owner and the date; the stage passes.
+  cfg_set "$cfg" 'j.waivers = [{ check: "secrets", until: "2099-01-01", reason: "fixture token", by: "tests" }]'
+  out=$(run_gate "$dest" pre-commit --only secrets) || { fail "$label" "valid waiver did not turn FAIL into WARN · $(head -3 <<< "$out")"; return; }
+  grep -qE '^WARN[[:space:]]+secrets[[:space:]]+waived until 2099-01-01 by tests' <<< "$out" || { fail "$label" "waiver line missing · $(grep secrets <<< "$out")"; return; }
+  grep -q '"waiver"' "$dest/qa-report/gate-pre-commit-latest.json" || { fail "$label" "waiver not recorded in the JSON verdict"; return; }
+  # Expired: not honoured, and the FAIL line says so.
+  cfg_set "$cfg" 'j.waivers[0].until = "2020-01-01"'
+  out=$(run_gate "$dest" pre-commit --only secrets) && { fail "$label" "expired waiver still honoured"; return; }
+  grep -qE '^FAIL[[:space:]]+secrets[[:space:]]+waiver expired 2020-01-01' <<< "$out" || { fail "$label" "expiry reason missing · $(grep secrets <<< "$out")"; return; }
+  # mvp-client: a waiver without an owner is not honoured.
+  cfg_set "$cfg" 'j.profile = "mvp-client"; j.waivers = [{ check: "secrets", until: "2099-01-01", reason: "fixture token" }]'
+  out=$(run_gate "$dest" pre-commit --only secrets) && { fail "$label" "waiver without by honoured in mvp-client"; return; }
+  grep -q 'needs "by" in profile mvp-client' <<< "$out" || { fail "$label" "missing-by reason absent · $(grep secrets <<< "$out")"; return; }
+  # Inline allow with a reason: the hit is counted as allowed, not as a finding; without a reason it still blocks.
+  cfg_set "$cfg" 'j.waivers = []'
+  printf 'GITHUB_TOKEN=%s # qa-gate:allow fixture token for the self-tests\n' "$token" > "$dest/leaked.txt"
+  (cd "$dest" && git_quiet add leaked.txt)
+  out=$(run_gate "$dest" pre-commit --only secrets) || { fail "$label" "inline allow not honoured · $(grep secrets <<< "$out")"; return; }
+  grep -qE '^PASS[[:space:]]+secrets.*1 allowed inline' <<< "$out" || { fail "$label" "allowed count missing · $(grep secrets <<< "$out")"; return; }
+  grep -qF "$token" <<< "$out" && { fail "$label" "token leaked into summary"; return; }
+  printf 'GITHUB_TOKEN=%s # qa-gate:allow\n' "$token" > "$dest/leaked.txt"
+  (cd "$dest" && git_quiet add leaked.txt)
+  out=$(run_gate "$dest" pre-commit --only secrets) && { fail "$label" "marker without a reason was honoured"; return; }
+  pass "$label"
+}
+
+test_gate_version_pin() {
+  local label="T17.version" dest cfg out installed
+  dest=$(prep_fixture_repo node)
+  cfg="$dest/qa-gate.config.json"
+  installed=$(installed_gate_version)
+  run_gate "$dest" init >/dev/null || { fail "$label" "init failed"; return; }
+  grep -q "\"gateVersion\": \"$installed\"" "$cfg" || { fail "$label" "init did not pin $installed"; return; }
+  out=$(run_gate "$dest" pre-commit --only gate-version) || { fail "$label" "pinned = installed should PASS"; return; }
+  grep -qE '^PASS[[:space:]]+gate-version' <<< "$out" || { fail "$label" "no PASS gate-version · $(head -2 <<< "$out")"; return; }
+  [[ "$(json_field "$dest/qa-report/gate-pre-commit-latest.json" gateVersion)" == "$installed" ]] || { fail "$label" "gateVersion missing in the verdict"; return; }
+  # The repo pinned a newer gate than the one installed: WARN by default, FAIL where a client is involved.
+  cfg_set "$cfg" 'j.gateVersion = "99.0.0"'
+  out=$(run_gate "$dest" pre-commit --only gate-version) || { fail "$label" "older installed gate must only WARN in portfolio-demo"; return; }
+  grep -qE '^WARN[[:space:]]+gate-version[[:space:]]+installed .* < pinned 99.0.0' <<< "$out" || { fail "$label" "WARN line wrong · $(grep gate-version <<< "$out")"; return; }
+  cfg_set "$cfg" 'j.profile = "mvp-client"'
+  out=$(run_gate "$dest" pre-commit --only gate-version) && { fail "$label" "older installed gate must FAIL in mvp-client"; return; }
+  grep -qE '^FAIL[[:space:]]+gate-version' <<< "$out" || { fail "$label" "no FAIL line · $(grep gate-version <<< "$out")"; return; }
+  # update moves the pin to the installed version and nothing else.
+  out=$(run_gate "$dest" update) || { fail "$label" "update exit $?"; return; }
+  grep -q "gateVersion $installed (was 99.0.0)" <<< "$out" || { fail "$label" "update output: $out"; return; }
+  [[ "$(node -e 'process.stdout.write(JSON.parse(require("fs").readFileSync(process.argv[1],"utf8")).profile)' "$cfg")" == "mvp-client" ]] || { fail "$label" "update touched other keys"; return; }
+  out=$(run_gate "$dest" pre-commit --only gate-version) || { fail "$label" "after update should PASS · $(grep gate-version <<< "$out")"; return; }
+  # No pin at all is a SKIP that tells the agent what to run.
+  cfg_set "$cfg" 'delete j.gateVersion'
+  out=$(run_gate "$dest" pre-commit --only gate-version) || { fail "$label" "unpinned must not block"; return; }
+  grep -qE '^SKIP[[:space:]]+gate-version[[:space:]]+not pinned' <<< "$out" || { fail "$label" "no SKIP not-pinned line · $(grep gate-version <<< "$out")"; return; }
+  pass "$label"
+}
+
 # --- Runner ----------------------------------------------------------------
 ensure_node_fixture_deps
 for fixture in node go python; do test_pre_commit_passes "$fixture"; done
@@ -334,6 +432,8 @@ test_env_without_profile_and_no_dockerfile
 test_suggest_with_mock_ai
 test_suggest_without_ai_falls_back
 test_sector_packs
+test_waivers
+test_gate_version_pin
 if node "$SCRIPT_DIR/../scripts/validate-packs.mjs" >/dev/null 2>&1; then pass "T15.packs-valid"; else fail "T15.packs-valid" "$(node "$SCRIPT_DIR/../scripts/validate-packs.mjs" 2>&1 | grep -A3 FAIL | head -6)"; fi
 
 printf '\n%s passed, %s failed\n' "$PASSED" "$FAILED"

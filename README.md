@@ -44,6 +44,18 @@ bash scripts/qa-gate.sh pr              # before merging a branch (Docker for Se
 bash scripts/qa-gate.sh all             # before shipping: every stage, stops at the first FAIL
 ```
 
+In GitHub Actions the same gate is one step, no secrets:
+
+```yaml
+- uses: limbpuma/qa-gate@v0.6.0
+  with:
+    stage: pr
+```
+
+`templates/ci.yml` is the full workflow (project toolchain, `build` when a Dockerfile exists, SARIF upload to the
+Security tab, monthly live compliance). `init` pins the installed gate version in the repo (`gateVersion`); bump
+it on purpose with `qa-gate.sh update` and keep the Action tag in step.
+
 Requirements: Git Bash (Windows) or bash (Linux), Node.js, git, curl. Docker for the security scanners and
 image builds. The browser toolchain (Playwright, axe, Lighthouse) installs itself on first use.
 
@@ -78,6 +90,9 @@ log   qa-report/_logs/pr-20260905-1040.log
   why (profile, feature, sector, date, no Docker, no web) · **WARN** worth a look before a release.
 - The JSON next to it is what an orchestrator verifies after delegating work to an agent. Logs are for humans
   chasing a FAIL, never for the model.
+- `qa-report/gate-<stage>.sarif` holds the same findings in SARIF 2.1.0 (secrets by file and line, Semgrep, Trivy,
+  every legal rule with the law behind it, axe violations). Uploaded from CI it annotates the PR diff and fills the
+  Security tab; free on public repos.
 
 ## Profiles: cost follows maturity
 
@@ -146,6 +161,31 @@ Any agent that commits goes through the hook without knowing it exists. Coding a
 in `AGENTS.md`: run `pr`, paste the summary block, never touch the gate's configuration. The orchestrator opens
 `qa-report/gate-pr-latest.json` and decides. If an agent lowers a threshold in a branch, `gate-config` fails.
 
+### Accepting a risk without hiding it
+
+Sometimes a FAIL is known and accepted for a while: a CVE with no fix that the code never reaches, a legal page a
+client is still writing. That goes into `waivers` in `qa-gate.config.json`:
+
+```json
+"waivers": [
+  { "check": "vsbg.odr-link", "until": "2026-12-31", "reason": "client's lawyer rewrites the AGB in Q4", "by": "RA Beispiel" }
+]
+```
+
+The check then reports `WARN  … waived until 2026-12-31 by RA Beispiel: <the original finding>` and the stage passes;
+the finding stays in the JSON, the SARIF and the evidence bundle. Past the date it is a FAIL again, and the line
+says `waiver expired`. `until` is mandatory everywhere; `by` from `mvp-client` up; `reason` in `production`. A
+waiver added on a branch is a config change, so `gate-config` shows it to the reviewer. Same idea elsewhere: a
+`.trivyignore` line takes `exp:YYYY-MM-DD`, and a documented test key can carry `# qa-gate:allow <reason>` on
+its line for the secrets scan (the reason is mandatory; a bare marker still blocks).
+
+### One gate version per repo
+
+`init` writes `gateVersion` into the config. Every run starts with `gate-version`: installed = pinned is PASS; an
+older installed gate is WARN for prototypes and FAIL for `mvp-client` and `production` (update the gate before
+trusting the verdict); a newer installed gate is WARN until someone runs `qa-gate.sh update` on the base branch.
+Several machines and agents then mean the same checks, not "whatever was installed there".
+
 ## Frequently asked
 
 - **Does it slow me down?** `pre-commit` is seconds. `pr` is a minute or two on a normal repo; Semgrep scans
@@ -155,7 +195,9 @@ in `AGENTS.md`: run `pr`, paste the summary block, never touch the gate's config
 - **Does it replace a lawyer?** No. It proves presence, technique and dates. The wording of Impressum, AGB and
   Datenschutzerklärung and the licences of images stay human work. The `pruefen` lists tell the lawyer where to look.
 - **Can an agent switch checks off?** Not silently. Configuration changes on a branch fail `gate-config`, and
-  every SKIP names its reason in the report.
+  every SKIP names its reason in the report. An accepted risk is a dated, signed waiver, never a lowered bar.
+- **Private repo?** Everything works the same; only the SARIF upload to GitHub's Security tab needs Advanced
+  Security there. The workflow keeps the file in the run's artifact and never fails on the upload.
 
 ## Not legal advice, and where the human stays responsible
 
@@ -181,9 +223,12 @@ and their licences are listed in [NOTICE](NOTICE).
 
 ```
 qa-gate.sh <stage> [options]      stage: pre-commit | pr | build | staging | compliance | deploy | all
-qa-gate.sh init [--web]
+qa-gate.sh init [--web]           bootstrap a repo (config with gateVersion, shim, hook, ignore files, DoD block)
+qa-gate.sh update                 pin the installed gate version in qa-gate.config.json (gateVersion)
+qa-gate.sh suggest                AI proposes qa-gate.config.json (never overwrites)
 
 --repo <path>            target repo (default: git toplevel of cwd)
+--profile <name>         run as this profile (overrides the config and DEPLOY_PROFILE; must exist in profiles)
 --only <id,id,...>       run only these check ids
 --allow-config-change    gate-config differing from the base branch is WARN instead of FAIL
 --no-docker              Docker-based checks are SKIP instead of FAIL (never in CI)
@@ -199,16 +244,17 @@ Exit codes: `0` PASS · `1` FAIL · `3` usage or internal error. `deploy` prints
 
 | Stage | Check id | Blocking | What |
 |---|---|---|---|
+| every stage | `gate-version` | yes | installed `VERSION` vs `gateVersion` in the config: equal → PASS; not pinned → SKIP; installed older → WARN (sandbox, portfolio-demo) or FAIL (mvp-client, production); installed newer → WARN, FAIL in production when the minor differs |
 | pre-commit | `typecheck` | yes | node `typecheck` script · go build + vet · python: SKIP |
 | pre-commit | `lint` | yes | node `lint` script · go vet · ruff |
 | pre-commit | `unit` | yes | node `test` script · go test · pytest |
-| pre-commit | `secrets` | yes | regex scan of staged files (else changed vs base, else all tracked): AWS/GitHub/Slack/Stripe keys, private key blocks, password assignments, JWTs, committed `.env` files. Logs rule + `file:line`, never the value |
+| pre-commit | `secrets` | yes | regex scan of staged files (else changed vs base, else all tracked): AWS/GitHub/Slack/Stripe keys, private key blocks, password assignments, JWTs, committed `.env` files. Logs rule + `file:line`, never the value; `qa-report/secrets.json` lists them; a line with `# qa-gate:allow <reason>` is counted as allowed |
 | pr | `typecheck` `lint` `unit` | yes | as above, whole repo; for Node, `unit` is SKIP when a coverage script exists (the coverage run executes the same suite) |
 | pr | `coverage` | yes | line coverage of the first stack; FAIL below `coverage.min` or below the ratchet minus `tolerance`; ratchet file only moves up |
 | pr | `integration` | yes | node `test:integration` script; SKIP when undefined |
 | pr | `audit` | yes | `npm/pnpm/yarn audit --audit-level` · `govulncheck` · `pip-audit` (SKIP when the tool is missing) |
 | pr | `semgrep` | yes | Docker `semgrep scan` with `semgrep.rulesets` + the stack's `stackRulesets`; on a branch only the files changed since the merge-base with the base branch are scanned (`semgrep.changedOnly`, up to 200 files; explicit targets, not `--baseline-commit`, which loses findings on Windows bind mounts), full scan on the base branch; FAIL on ERROR, WARN on WARNING; report `qa-report/semgrep.json` |
-| pr | `trivy-fs` | yes | Docker `trivy fs` (vuln + misconfig; Trivy's secret scanner is off because the gate has its own) with `trivy.skipDirs` (node_modules, .next*, dist, coverage, .lighthouse, …) and `trivy.timeoutMin`; FAIL on HIGH/CRITICAL; report `qa-report/trivy-fs.json` |
+| pr | `trivy-fs` | yes | Docker `trivy fs` (vuln + misconfig; Trivy's secret scanner is off because the gate has its own) with `trivy.skipDirs` (node_modules, .next*, dist, coverage, .lighthouse, …), `trivy.timeoutMin` and the repo's `.trivyignore` (`CVE-… exp:YYYY-MM-DD`); FAIL on HIGH/CRITICAL; report `qa-report/trivy-fs.json` |
 | pr | `ai-register` | yes | when a manifest pulls in an AI SDK (openai, anthropic, langchain, minimax, ollama, …) the repo must have `docs/AI-ACT-REGISTER.md` with the six sections (System, Risikoklasse, Art. 50, Art. 4, Anbieter, Logging); missing → FAIL, `[TODO]` placeholders → WARN, no AI SDK → SKIP. `init` writes the template |
 | pr | `gate-config` | yes | `qa-gate.config.json`, `.semgrepignore`, `.trivyignore` hashed against the base branch; a change is FAIL (WARN with `--allow-config-change`) |
 | build | `docker-build` | yes | `docker build` of the first Dockerfile (`build.dockerfile`, `./Dockerfile`, `apps/*/Dockerfile`) |
@@ -224,6 +270,8 @@ Exit codes: `0` PASS · `1` FAIL · `3` usage or internal error. `deploy` prints
 
 With several stacks in one repo, per-stack ids read `typecheck@go`, `unit@python`, and so on.
 A Docker-based check with Docker stopped is FAIL (reason in the summary); `--no-docker` turns it into SKIP.
+A blocking FAIL with a valid entry in `waivers` becomes WARN (see Accepting a risk); the JSON keeps the finding
+under `waiver`.
 
 ## Summary block (stdout)
 
@@ -246,18 +294,25 @@ Everything else (tool output, debug) is in the log file, never on stdout.
 
 ```json
 { "schema": 1, "stage": "pr", "repo": "example-shop", "stack": ["node"], "verdict": "FAIL",
-  "startedAt": "2026-09-02T14:03:10+0200", "durationSec": 212, "configHash": "sha256:…", "baseRef": "master",
+  "startedAt": "2026-09-02T14:03:10+0200", "durationSec": 212, "configHash": "sha256:…", "gateVersion": "0.6.0", "baseRef": "master",
   "checks": [ { "id": "semgrep", "status": "FAIL", "blocking": true, "durationSec": 77,
                 "summary": "2 error / 7 warning → qa-report/semgrep.json", "count": { "error": 2, "warning": 7 },
                 "report": "qa-report/semgrep.json" } ],
   "log": "qa-report/_logs/pr-20260902-140310.log" }
 ```
 
+A waived check carries `"status": "WARN"` and `"waiver": { "check", "until", "by", "reason" }`. Next to the verdict,
+`qa-report/gate-<stage>.sarif` (SARIF 2.1.0, tool `qa-gate`) lists every FAIL/WARN as a located result: secrets at
+`file:line`, Semgrep and Trivy findings at their path, legal rules and axe violations anchored on
+`qa-gate.config.json` with the page URL in the message and the law's source as `helpUri`.
+
 ## Configuration (`qa-gate.config.json`, deep-merged over `templates/qa-gate.config.json`)
 
 | Key | Default | Meaning |
 |---|---|---|
-| `profile` / `profiles` | `auto` / four presets | see Profiles above; `auto` reads `DEPLOY_PROFILE` from the env files |
+| `gateVersion` | written by `init` | the gate version this repo expects; `qa-gate.sh update` moves it; checked by `gate-version` |
+| `profile` / `profiles` | `auto` / four presets | see Profiles above; `auto` reads `DEPLOY_PROFILE` from the env files; `--profile` overrides both |
+| `waivers` | `[]` | accepted risks `{ check, until, reason, by }`: FAIL → WARN until the date; `by` required from `mvp-client`, `reason` in `production`; `check` is a check id (`trivy-fs`, `coverage`, …) or a legal rule id (`vsbg.odr-link`) |
 | `stack` | `"auto"` | `node` · `go` · `python` · `["node","go"]`; auto detects from package.json / go.mod / pyproject.toml |
 | `git.base` | `"auto"` | base branch for `gate-config` and the secrets diff: `main`, else `master` |
 | `commands.node.*` | `"auto"` | `auto` = package.json script of the same name (`typecheck`, `lint`, `test`, `test:coverage`, `test:integration`, `test:e2e`) at the root, else `pnpm -r run <script>` when a pnpm workspace package (`apps/*`, `packages/*`) defines it |
@@ -266,7 +321,7 @@ Everything else (tool output, debug) is in the log file, never on stdout.
 | `coverage.min` / `ratchet` / `tolerance` / `ratchetFile` | 80 / true / 0.2 / `qa-report/coverage-ratchet.json` | commit the ratchet file so the bar persists |
 | `secrets.excludes` | node_modules, .git, qa-report, dist, .next, coverage | path prefixes skipped by the regex scan |
 | `semgrep.image` / `rulesets` / `stackRulesets` / `blockOn` / `changedOnly` | pinned tag / `p/secrets p/owasp-top-ten` / per stack / `ERROR` / true | explicit `p/` rulesets only, metrics off, no account; `changedOnly` scans only the changed files on branches |
-| `trivy.image` / `severity` / `ignoreUnfixed` / `scanners` / `timeoutMin` / `skipDirs` | pinned tag / `HIGH,CRITICAL` / true / `vuln,misconfig` / 15 / build + dependency dirs | `.trivyignore` takes CVE ids only; paths go in `skipDirs` |
+| `trivy.image` / `severity` / `ignoreUnfixed` / `scanners` / `timeoutMin` / `skipDirs` | pinned tag / `HIGH,CRITICAL` / true / `vuln,misconfig` / 15 / build + dependency dirs | `.trivyignore` takes CVE ids only (`CVE-… exp:YYYY-MM-DD`); paths go in `skipDirs` |
 | `audit.level` | `high` | audit threshold for the package manager |
 | `build.dockerfile` / `context` / `target` | auto / `.` / `` | image build inputs |
 | `web.baseUrl` / `paths` / `startCommand` / `readyPath` / `startTimeoutSec` | `""` / `["/"]` / `""` / `/` / 90 | target app for staging + compliance; empty baseUrl → both stages SKIP |
@@ -311,14 +366,16 @@ Fixtures under `tests/fixtures/{node,go,python,web}` are copied into temp git re
 static German pizzeria site with a `BAD=1` variant (Google Fonts before consent, no reject button, no headers, no
 alt, AI chat without disclosure) that must FAIL `compliance`; T10 covers the `ai-register` check. Tests cover: PASS on each
 fixture (pre-commit and pr), a planted GitHub token blocking without leaking, the coverage ratchet, gate-config
-tampering, `init` idempotency and the installed hook, and, when Docker is up, a vulnerable dependency plus a
+tampering, `init` idempotency and the installed hook, waivers (valid, expired, missing owner, inline allow), the
+version pin (`init`, drift per profile, `update`), SARIF output, and, when Docker is up, a vulnerable dependency plus a
 planted AWS key and command injection for Semgrep. The node fixture installs its own `node_modules` once.
 
 ## Templates for the German layer
 
 `templates/barrierefreiheit.md` (the § 19 BFSGV page copy, DE), `templates/BITV-SELBSTBEWERTUNG.md` (manual
 Prüfschritte per release), `templates/AI-ACT-REGISTER.md` (KI-VO register: system, risk class, Art. 50 measures,
-Art. 4 literacy, provider, logging), `templates/ci.yml` (GitHub Actions caller that clones the public gate repo; no secrets).
+Art. 4 literacy, provider, logging), `templates/ci.yml` (GitHub Actions workflow built on the published Action
+`limbpuma/qa-gate@<tag>` — `action.yml` at the repo root — with SARIF upload and monthly live compliance; no secrets).
 
 ## Requirements
 

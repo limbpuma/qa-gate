@@ -9,6 +9,11 @@ Required local steps before pushing or opening a PR:
 3. `bash scripts/qa-gate.sh pr` — must PASS before opening a PR (whole repo, full suite).
 4. `bash scripts/qa-gate.sh build` — must PASS before tagging a release.
 
+5. Never lower a threshold, skip a check or edit `qa-gate.config.json` to make the gate pass — `gate-config` flags it.
+   An accepted risk goes into `waivers` in `qa-gate.config.json` (`check`, `until` date, `reason`, `by`): it turns
+   that FAIL into a WARN until the date and is reviewed like any other config change.
+6. `bash scripts/qa-gate.sh update` moves the pinned gate version (`gateVersion`) — only on the base branch, on purpose.
+
 Exit codes: `0` PASS · `1` FAIL · `3` usage/internal error. Report goes to `qa-report/gate-<stage>-<timestamp>.json`
 and `qa-report/_logs/<stage>-<timestamp>.log`. Summary on stdout is the contract — never write to stdout
 outside the summary block. See `scripts/qa-gate/README.md` for the full check table and config reference.

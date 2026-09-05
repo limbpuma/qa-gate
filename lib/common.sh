@@ -109,7 +109,7 @@ now_iso()     { date +%Y-%m-%dT%H:%M:%S%z; }
 # R_VALUE, R_RATCHET, R_MIN, R_REPORT, R_COUNT_JSON. It must not write to stdout.
 run_check() {
   local id="$1" blocking="$2" fn="$3"; shift 3
-  local R_STATUS="" R_SUMMARY="" R_VALUE="" R_RATCHET="" R_MIN="" R_REPORT="" R_COUNT_JSON=""
+  local R_STATUS="" R_SUMMARY="" R_VALUE="" R_RATCHET="" R_MIN="" R_REPORT="" R_COUNT_JSON="" R_WAIVER_JSON=""
 
   log_info "--- check: $id (blocking=$blocking) ---"
   start_timer
@@ -124,12 +124,13 @@ run_check() {
     if (( rc == 0 )); then R_STATUS="$STATUS_PASS"; R_SUMMARY="${R_SUMMARY:-ok}"
     else R_STATUS="$STATUS_FAIL"; R_SUMMARY="${R_SUMMARY:-exit $rc}"; fi
   fi
+  apply_waiver "$id"
 
   local extras="{}"
-  if [[ -n "${R_VALUE}${R_RATCHET}${R_MIN}${R_REPORT}${R_COUNT_JSON}" ]]; then
+  if [[ -n "${R_VALUE}${R_RATCHET}${R_MIN}${R_REPORT}${R_COUNT_JSON}${R_WAIVER_JSON}" ]]; then
     extras=$(node "$LIB_DIR/json.js" build-extras \
       --value="$R_VALUE" --ratchet="$R_RATCHET" --min="$R_MIN" \
-      --report="$R_REPORT" --count="$R_COUNT_JSON" 2>>"$LOG_FILE" || echo "{}")
+      --report="$R_REPORT" --count="$R_COUNT_JSON" --waiver="$R_WAIVER_JSON" 2>>"$LOG_FILE" || echo "{}")
   fi
 
   CHECK_RESULTS+=("${id}|${R_STATUS}|${blocking}|${dur}|${R_SUMMARY}|${extras}")

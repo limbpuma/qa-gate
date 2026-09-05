@@ -18,8 +18,9 @@ init_config() {
     const j = JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));
     const stack = process.argv[2];
     j.stack = stack.startsWith('[') ? JSON.parse(stack) : stack;
+    j.gateVersion = process.argv[4];
     require('fs').writeFileSync(process.argv[3], JSON.stringify(j, null, 2) + '\n');
-  " "$tpl" "$stack" "$dest"
+  " "$tpl" "$stack" "$dest" "$(installed_version)"
   write_marker "wrote   $dest"
 }
 
@@ -108,7 +109,7 @@ init_gitignore() {
   local line added=0
   [[ -f "$dest" ]] || : > "$dest"
   # Why: verdicts and tool reports are regenerated on every run; only the ratchet and the evidence bundles are history.
-  for line in "qa-report/_logs/" "qa-report/_lighthouse/" "qa-report/*.json" "qa-report/*.jsonl" "!qa-report/coverage-ratchet.json"; do
+  for line in "qa-report/_logs/" "qa-report/_lighthouse/" "qa-report/*.json" "qa-report/*.jsonl" "qa-report/*.sarif" "!qa-report/coverage-ratchet.json"; do
     if grep -qF "$line" "$dest"; then continue; fi
     printf '%s\n' "$line" >> "$dest"
     added=1

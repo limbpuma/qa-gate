@@ -200,6 +200,8 @@ run_stage_inner() {
   STAGE_STARTED_AT=$(now_iso)
   local started
   started=$(date +%s)
+  # Why first: a verdict from a gate older than the repo pinned is not the verdict the repo asked for.
+  run_single_check gate-version true gate_version_check
   case "$STAGE" in
     pre-commit) stage_pre_commit ;;
     pr)         stage_pr ;;
@@ -210,6 +212,7 @@ run_stage_inner() {
   esac
   STAGE_DURATION=$(( $(date +%s) - started ))
   write_verdict
+  sarif_write
 }
 
 # all = pre-commit → pr → build → staging → compliance, stops at the first FAIL.

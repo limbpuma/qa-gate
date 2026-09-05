@@ -1,4 +1,5 @@
 # .trivyignore: vulnerability IDs Trivy must ignore, one per line, with a reason and an expiry date.
 # This file takes CVE / GHSA ids ONLY. Directories are excluded via trivy.skipDirs in qa-gate.config.json.
+# Always add an expiry: past the date Trivy counts the id again, so an accepted risk cannot be forgotten.
 # Example:
-# CVE-2024-12345  # no fix upstream, not reachable from our code. Review 2026-12-01
+# CVE-2024-12345 exp:2026-12-01  # no fix upstream, not reachable from our code (accepted by <name>)

@@ -1,5 +1,6 @@
 {
   "version": 1,
+  "gateVersion": "",
   "profile": "auto",
   "profiles": {
     "sandbox": {
@@ -90,6 +91,7 @@
       "coverage"
     ]
   },
+  "waivers": [],
   "semgrep": {
     "image": "semgrep/semgrep:1.130.0",
     "rulesets": [
