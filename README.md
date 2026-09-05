@@ -71,6 +71,9 @@ image builds. The browser toolchain (Playwright, axe, Lighthouse) installs itsel
    file you can hand to a client, their data-protection officer, or a Kammer.
 4. Every four weeks a scheduled task re-audits your live sites and checks whether the laws behind the rules
    changed. No tokens are spent unless something actually changed.
+5. Every run appends one line to `qa-report/history.jsonl`; `qa-gate.sh trend` shows the last runs (verdict,
+   coverage, Lighthouse, failing rules). On client profiles the file is committed: conformity over time, not
+   just today.
 
 ## What you get back
 
@@ -126,6 +129,12 @@ against the site:
   a human contact exists, and a `docs/AI-ACT-REGISTER.md` exists when the code calls a model.
 - **VSBG** statement, and the obsolete EU ODR link (platform closed 20.07.2025) flagged as an Abmahnung risk.
 
+### Which pages are audited
+
+`web.paths` lists them; set it to `"sitemap"` and the gate reads `/sitemap.xml` instead, capped per profile
+(portfolio-demo 10, mvp-client 30, production 100 pages), with `/`, the Impressum and the Datenschutzerklärung
+always included. The page added on Friday is audited on Monday without anyone editing a list.
+
 ### Sector packs
 
 A landing page for a Steuerberater is not a landing page for a pizzeria. Set `"legal": { "sector": "…" }` and the
@@ -141,6 +150,12 @@ Laws change every few months, not every day. A scheduled task hashes the officia
 (every 4 weeks, no tokens) and leaves a diff when one changed. The `/legal-review` command reads only those
 diffs, drafts the rule change as a pull request on this repo, and never merges: a legal change is a human
 decision. Every rule also carries a quarterly review date; past it, the gate prints `WARN legal.rules-stale`.
+
+Every rule also proves itself: `tests/fixtures/rules/<rule-id>/pass.html` must yield PASS and `fail.html` FAIL
+or WARN (`node scripts/rule-fixtures.mjs`, 36 rules in under a minute). A rule without its pair does not enter
+the registry (`scripts/validate-rules.mjs`). That is the bar for outside contributions too: see
+[CONTRIBUTING.md](CONTRIBUTING.md), the issue templates (new sector pack, rule is wrong, law changed) and the
+JSON Schemas in `schemas/` for packs and for `qa-gate.config.json`.
 
 ## Where AI is used, and where it is not
 
@@ -225,7 +240,8 @@ and their licences are listed in [NOTICE](NOTICE).
 ```
 qa-gate.sh <stage> [options]      stage: pre-commit | pr | build | staging | compliance | deploy | all
 qa-gate.sh init [--web]           bootstrap a repo (config with gateVersion, shim, hook, ignore files, DoD block)
-qa-gate.sh update                 pin the installed gate version in qa-gate.config.json (gateVersion)
+qa-gate.sh update                 pin the installed gate version in qa-gate.config.json (gateVersion); syncs the history .gitignore rule
+qa-gate.sh trend [n]              last n runs from qa-report/history.jsonl
 qa-gate.sh suggest                AI proposes qa-gate.config.json (never overwrites)
 
 --repo <path>            target repo (default: git toplevel of cwd)
@@ -325,7 +341,8 @@ A waived check carries `"status": "WARN"` and `"waiver": { "check", "until", "by
 | `trivy.image` / `severity` / `ignoreUnfixed` / `scanners` / `timeoutMin` / `skipDirs` | pinned tag / `HIGH,CRITICAL` / true / `vuln,misconfig` / 15 / build + dependency dirs | `.trivyignore` takes CVE ids only (`CVE-… exp:YYYY-MM-DD`); paths go in `skipDirs` |
 | `audit.level` | `high` | audit threshold for the package manager |
 | `build.dockerfile` / `context` / `target` | auto / `.` / `` | image build inputs |
-| `web.baseUrl` / `paths` / `startCommand` / `readyPath` / `startTimeoutSec` | `""` / `["/"]` / `""` / `/` / 90 | target app for staging + compliance; empty baseUrl → both stages SKIP |
+| `web.baseUrl` / `paths` / `startCommand` / `readyPath` / `startTimeoutSec` | `""` / `["/"]` / `""` / `/` / 90 | target app for staging + compliance; empty baseUrl → both stages SKIP; `paths: "sitemap"` reads `/sitemap.xml` |
+| `web.sitemapMaxPages` / `profiles.<p>.sitemapMaxPages` | 10 / 0 · 10 · 30 · 100 | page cap when `paths` is `"sitemap"`; `/`, Impressum and Datenschutz always included |
 | `web.lighthouse.runs` / `formFactors` / `thresholds` | 3 / mobile+desktop / perf 80 · a11y 95 · best-practices 90 · seo 90 | median of the runs must reach every threshold |
 | `web.pa11y.standard` / `runners` | `WCAG2AA` / axe + htmlcs | |
 | `web.axe.tags` / `warnTags` / `blockImpacts` | WCAG 2.1 AA + EN-301-549 / wcag22aa / serious, critical | |
@@ -336,6 +353,8 @@ A waived check carries `"status": "WARN"` and `"waiver": { "check", "until", "by
 | `legal.features` | `[]` | enables feature-bound rules: `shop`, `food`, `forms`, `newsletter` (AI rules key off `legal.ai`) |
 | `legal.impressum.requiredPatterns` | `[]` | extra regexes the Impressum must contain (e.g. `HRB`, `USt-IdNr`) |
 | `report.dir` / `keepLogs` | `qa-report` / 10 | where verdicts and logs go; older logs per stage are pruned |
+| `report.history` / `commitHistory` / `profiles.<p>.commitHistory` | true / false / true on mvp-client + production | `history.jsonl` written per run; `init` and `update` add `!qa-report/history.jsonl` to `.gitignore` when the profile commits it |
+| `$schema` | raw URL of `schemas/config.schema.json` | editor completion; carried into each repo's config by `init` |
 
 ## Live sites and legal watch (no tokens)
 
@@ -368,8 +387,9 @@ static German pizzeria site with a `BAD=1` variant (Google Fonts before consent,
 alt, AI chat without disclosure) that must FAIL `compliance`; T10 covers the `ai-register` check. Tests cover: PASS on each
 fixture (pre-commit and pr), a planted GitHub token blocking without leaking, the coverage ratchet, gate-config
 tampering, `init` idempotency and the installed hook, waivers (valid, expired, missing owner, inline allow), the
-version pin (`init`, drift per profile, `update`), SARIF output, and, when Docker is up, a vulnerable dependency plus a
-planted AWS key and command injection for Semgrep. The node fixture installs its own `node_modules` once.
+version pin (`init`, drift per profile, `update`), SARIF output, sitemap discovery with the per-profile cap, the run
+history and `trend`, every legal rule against its own fixture pair (T21/T22), and, when Docker is up, a vulnerable
+dependency plus a planted AWS key and command injection for Semgrep. The node fixture installs its own `node_modules` once.
 
 ## Templates for the German layer
 

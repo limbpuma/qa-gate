@@ -117,6 +117,45 @@ init_gitignore() {
   if (( added )); then write_marker "appended qa-report ignore lines to $dest"; else write_marker "exists  $dest"; fi
 }
 
+# The history file is regenerated like the other reports, but on client profiles it IS the evidence trail and
+# gets committed: `report.commitHistory` (per profile) decides, and init/update keep the .gitignore exception in step.
+readonly HISTORY_GITIGNORE_EXCEPTION="!qa-report/history.jsonl"
+history_gitignore_sync() {
+  local want="$1" dest="$REPO_PATH/.gitignore"
+  [[ -f "$dest" ]] || : > "$dest"
+  if [[ "$want" == "true" ]]; then
+    if grep -qxF "$HISTORY_GITIGNORE_EXCEPTION" "$dest"; then write_marker "exists  $dest (history committed)"; return 0; fi
+    printf '%s\n' "$HISTORY_GITIGNORE_EXCEPTION" >> "$dest"
+    write_marker "appended $HISTORY_GITIGNORE_EXCEPTION to $dest (profile $PROFILE commits the history)"
+    history_gitignore_unshadow
+    return 0
+  fi
+  if grep -qxF "$HISTORY_GITIGNORE_EXCEPTION" "$dest"; then
+    grep -vxF "$HISTORY_GITIGNORE_EXCEPTION" "$dest" > "$dest.tmp" && mv "$dest.tmp" "$dest"
+    write_marker "removed $HISTORY_GITIGNORE_EXCEPTION from $dest (profile $PROFILE keeps the history local)"
+  fi
+}
+history_commit_wanted() { profile_cfg ".commitHistory" ".report.commitHistory"; }
+
+# After the exception exists: is the file still ignored? A whole-directory rule in the repo's own .gitignore is
+# rewritten to "<dir>/*"; anything else (global excludes, nested files) is reported for a human to fix.
+history_gitignore_unshadow() {
+  local dest="$REPO_PATH/.gitignore" dir rel verbose pattern source_file
+  dir=$(cfg_get ".report.dir"); dir="${dir:-qa-report}"
+  rel="$dir/history.jsonl"
+  [[ -d "$REPO_PATH/.git" ]] || return 0
+  (cd "$REPO_PATH" && git check-ignore -q "$rel" 2>/dev/null) || return 0
+  verbose=$(cd "$REPO_PATH" && git check-ignore -v "$rel" 2>/dev/null | head -1)
+  source_file="${verbose%%:*}"
+  pattern="${verbose#*:*:}"; pattern="${pattern%%$'\t'*}"
+  if [[ "$source_file" == ".gitignore" && "$pattern" =~ ^/?${dir}/?$ ]]; then
+    sed -i "s#^${pattern}\$#${dir}/*#" "$dest"
+    write_marker "replaced '$pattern' by '$dir/*' in $dest (a whole-directory rule blocks every exception below it)"
+    return 0
+  fi
+  write_marker "warning: $rel stays ignored by ${verbose%%$'\t'*} — adjust that rule by hand"
+}
+
 # Step 7: --web adds a placeholder URL.
 init_web() {
   local dest="$REPO_PATH/qa-gate.config.json"
@@ -167,5 +206,8 @@ init_all() {
   init_gitignore
   init_ai_register   "$tpl_dir/AI-ACT-REGISTER.md"
   if (( web )); then init_web; fi
+  load_config
+  resolve_profile
+  history_gitignore_sync "$(history_commit_wanted)"
   return 0
 }

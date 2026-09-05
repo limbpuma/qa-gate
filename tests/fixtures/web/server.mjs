@@ -19,14 +19,29 @@ const SECURITY_HEADERS = {
   'referrer-policy': 'strict-origin-when-cross-origin',
 };
 
+// /seite-<n> pages exist only in the sitemap (served as the menu page) so the per-profile page cap is observable.
+const VIRTUAL_PAGE_COUNT = 32;
+const REAL_PAGES = ['/', '/speisekarte', '/kasse', '/impressum', '/datenschutz', '/agb', '/widerruf', '/barrierefreiheit'];
+
 function fileFor(url) {
   const path = url.split('?')[0];
+  if (/^\/seite-\d+$/.test(path)) return join(SITE, 'speisekarte.html');
   const name = path === '/' ? 'index.html' : `${path.replace(/^\//, '').replace(/\/$/, '')}.html`;
   const candidate = join(SITE, name);
   return existsSync(candidate) ? candidate : null;
 }
 
+function sitemapXml(origin) {
+  const urls = [...REAL_PAGES, ...Array.from({ length: VIRTUAL_PAGE_COUNT }, (_, i) => `/seite-${i + 1}`)];
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((u) => `  <url><loc>${origin}${u}</loc></url>`).join('\n')}\n</urlset>\n`;
+}
+
 createServer((req, res) => {
+  if ((req.url || '/').split('?')[0] === '/sitemap.xml') {
+    res.writeHead(200, { 'content-type': 'application/xml; charset=utf-8' });
+    res.end(sitemapXml(`http://127.0.0.1:${PORT}`));
+    return;
+  }
   const file = fileFor(req.url || '/');
   const headers = { 'content-type': 'text/html; charset=utf-8', ...(BAD ? {} : SECURITY_HEADERS) };
   if (!file) { res.writeHead(404, headers); res.end('<!doctype html><html lang="de"><body><h1>404</h1></body></html>'); return; }

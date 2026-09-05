@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fixture Pizzeria</title>
+
+<style>body{font-family:system-ui,sans-serif;margin:0 auto;max-width:720px;padding:16px;color:#1a1a1a;background:#fff}.banner{position:fixed;bottom:0;left:0;right:0;background:#f3f3f3;padding:16px;border-top:1px solid #ccc}button{font:inherit;padding:10px 16px;min-height:44px}</style>
+
+</head>
+<body>
+<header><nav aria-label="Hauptnavigation"><a href="/">Start</a> · <a href="/speisekarte">Speisekarte</a> · <a href="/kasse">Kasse</a></nav></header>
+<main id="main">
+<h1>Willkommen bei Fixture Pizzeria</h1>
+<p>Lieferung und Abholung in Dortmund.</p>
+
+<section id="ki-chat" aria-label="Assistent">
+<h2>Fragen zur Speisekarte?</h2>
+<p>Sie chatten hier mit einem KI-Assistenten (künstliche Intelligenz), nicht mit einem Menschen. Lieber anrufen? <a href="tel:+492310000000">0231 000000</a>.</p>
+<p data-ai-generated="true"><small>KI-generierter Vorschlag:</small> Heute empfehlen wir die Pizza Margherita.</p>
+<label for="frage">Ihre Frage</label> <input id="frage" name="frage"> <button type="button">Senden</button>
+</section>
+<section id="speisekarte"><h2>Speisekarte</h2>
+<p>Pizza Margherita 8,90 € · Allergene: Gluten (Weizen), Milch</p>
+
+<p>Lieferkosten 2,50 € innerhalb Dortmunds. Lieferzeit ca. 30 Minuten.</p>
+</section>
+<section id="kasse"><h2>Kasse</h2>
+<p>Gesamt 8,90 € inkl. MwSt.</p>
+<button type="button">Bestellen</button>
+<p>Es gelten unsere AGB und die Widerrufsbelehrung.</p>
+</section>
+
+
+<section id="impressum"><h2>Impressum</h2>
+<p>Fixture Pizzeria, Inhaber Max Muster, Musterstraße 1, 44135 Dortmund, E-Mail: info@example.de, Telefon 0231 000000.</p>
+
+</section>
+
+<section id="datenschutz"><h2>Datenschutzerklärung</h2>
+<p>Verantwortlicher im Sinne der DSGVO: Fixture Pizzeria, Musterstraße 1, 44135 Dortmund.</p>
+<p>Rechtsgrundlage der Verarbeitung von Bestellungen ist Art. 6 Abs. 1 lit. b DSGVO.</p>
+<p>Speicherdauer: Bestelldaten werden nach zehn Jahren gelöscht (handelsrechtliche Aufbewahrungsfrist).</p>
+<p>Sie haben das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung der Verarbeitung und Datenübertragbarkeit.</p>
+<p>Erteilte Einwilligungen können Sie jederzeit widerrufen.</p>
+<p>Beschwerderecht bei der Aufsichtsbehörde: Landesbeauftragte für Datenschutz und Informationsfreiheit Nordrhein-Westfalen.</p>
+<p>Hosting: Diese Website wird bei einem Rechenzentrum in Frankfurt am Main gehostet.</p>
+<p>Datenschutzbeauftragter: Max Muster, Telefon 0231 000001.</p>
+<p>Der Assistent auf der Startseite nutzt das Modell MiniMax-M3 des Anbieters MiniMax; Ihre Fragen werden dorthin übermittelt.</p>
+
+<p>Drittlandtransfer: Eine Übermittlung in die USA erfolgt auf Grundlage des EU-US Data Privacy Framework bzw. der Standardvertragsklauseln.</p>
+</section>
+<section id="barrierefreiheit"><h2>Erklärung zur Barrierefreiheit</h2>
+<p>Diese Website orientiert sich an EN 301 549 (WCAG 2.1 AA). Feedback und Kontakt: siehe Impressum.</p>
+</section>
+<section id="agb"><h2>AGB</h2>
+<p>Preise verstehen sich als Endpreise inklusive Mehrwertsteuer. Verbraucherschlichtungsstelle: Wir sind nicht bereit und nicht verpflichtet, an einem Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teilzunehmen.</p>
+</section>
+<section id="widerruf"><h2>Widerrufsbelehrung</h2>
+<p>Sie haben das Recht, binnen vierzehn Tagen ohne Angabe von Gründen diesen Vertrag zu widerrufen. Muster-Widerrufsformular: Hiermit widerrufe(n) ich/wir den von mir/uns abgeschlossenen Vertrag.</p>
+</section>
+</main>
+<footer><nav aria-label="Rechtliches"><a href="/impressum">Impressum</a> · <a href="/datenschutz">Datenschutz</a> · <a href="/barrierefreiheit">Barrierefreiheit</a> · <a href="/agb">AGB</a> · <a href="/widerruf">Widerruf</a> · <button type="button" onclick="document.querySelector('.banner')?.removeAttribute('hidden')">Cookie-Einstellungen</button></nav></footer>
+
+<div class="banner" role="region" aria-label="Cookie-Einstellungen">
+  <p>Wir verwenden nur technisch notwendige Cookies. Optionale Statistik-Cookies erst nach Ihrer Zustimmung.</p>
+  <button type="button" onclick="this.parentElement.remove()">Alle akzeptieren</button>
+  <button type="button" onclick="this.parentElement.remove()">Ablehnen</button>
+</div>
+</body>
+</html>

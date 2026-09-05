@@ -17,8 +17,34 @@ web_base_url() {
   cfg_get ".web.baseUrl" | sed 's#/*$##'
 }
 web_is_live_target() { [[ -n "${BASE_URL_OVERRIDE:-}" ]]; }
-web_paths_json() {
+# web.paths (or --paths) is a JSON array, or the word "sitemap": then the list comes from /sitemap.xml, capped per
+# profile (profiles.<name>.sitemapMaxPages), with "/", Impressum and Datenschutz always included.
+WEB_PATHS_RESOLVED=""
+web_paths_raw() {
   if [[ -n "${PATHS_OVERRIDE:-}" ]]; then printf '%s' "$PATHS_OVERRIDE"; else cfg_get ".web.paths"; fi
+}
+web_paths_wants_sitemap() { [[ "$(web_paths_raw)" == "sitemap" ]]; }
+web_paths_json() {
+  if web_paths_wants_sitemap; then printf '%s' "${WEB_PATHS_RESOLVED:-$(web_paths_always_json)}"; else web_paths_raw; fi
+}
+# Why the whole legal object and not two path arguments: Git Bash rewrites an argument that starts with "/"
+# into a Windows path ("/impressum" → "C:/Program Files/Git/impressum"); a JSON object is left alone.
+web_paths_always_json() {
+  node -e '
+    const legal = JSON.parse(process.argv[1] || "{}");
+    process.stdout.write(JSON.stringify([...new Set(["/", legal.impressumPath || "/impressum", legal.datenschutzPath || "/datenschutz"])]));
+  ' "$(cfg_get ".legal")"
+}
+# Why in the parent shell: web_paths_json runs inside $(...) everywhere, where a cache assignment would be lost.
+# Called by run_web_stage once the app answers.
+web_resolve_paths() {
+  WEB_PATHS_RESOLVED=""
+  web_paths_wants_sitemap || return 0
+  local max
+  max=$(profile_cfg ".sitemapMaxPages" ".web.sitemapMaxPages"); max="${max:-10}"
+  ensure_web_toolchain || return 0
+  WEB_PATHS_RESOLVED=$(web_node sitemap.mjs --base "$(web_base_url)" --max "$max" --always "$(web_paths_always_json)") || WEB_PATHS_RESOLVED=""
+  log_info "web paths from sitemap (max $max, profile $PROFILE): ${WEB_PATHS_RESOLVED:-fallback}"
 }
 
 # Absolute URLs from web.paths (default "/").

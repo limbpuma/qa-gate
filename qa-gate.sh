@@ -31,6 +31,7 @@ Usage:
   qa-gate.sh <stage> [options]
   qa-gate.sh init [--web] [--repo <path>]
   qa-gate.sh update [--repo <path>]      pin the installed gate version in qa-gate.config.json (gateVersion)
+  qa-gate.sh trend [n] [--repo <path>]   last n runs from qa-report/history.jsonl (verdict, coverage, Lighthouse, fails)
   qa-gate.sh suggest [--repo <path>]     AI proposes qa-gate.config.json (structure-only digest; never overwrites)
 
 Stages:
@@ -60,6 +61,7 @@ REPO_ARG=""
 BASE_URL_OVERRIDE=""
 PATHS_OVERRIDE=""
 PROFILE_OVERRIDE=""
+TREND_ROWS=""
 INIT_WEB=""
 JSON_ONLY=0
 
@@ -67,6 +69,7 @@ parse_args() {
   while (( $# > 0 )); do
     case "$1" in
       init|update|suggest|pre-commit|pr|build|staging|compliance|deploy|all) STAGE="$1"; shift ;;
+      trend)                 STAGE="trend"; shift; if [[ "${1:-}" =~ ^[0-9]+$ ]]; then TREND_ROWS="$1"; shift; fi ;;
       --repo)                REPO_ARG="${2:?--repo needs a path}"; shift 2 ;;
       --profile)             PROFILE_OVERRIDE="${2:?--profile needs a name}"; shift 2 ;;
       --only)                ONLY_FILTER="${2:?--only needs ids}"; shift 2 ;;
@@ -120,6 +123,11 @@ main() {
   if [[ "$STAGE" == "update" ]]; then
     update_pin
     exit $?
+  fi
+  if [[ "$STAGE" == "trend" ]]; then
+    REPORT_DIR=$(cfg_get ".report.dir"); REPORT_DIR="${REPORT_DIR:-qa-report}"
+    node "$LIB_DIR/history.js" trend "$(history_file)" "$TREND_ROWS"
+    exit "$EXIT_PASS"
   fi
   if [[ "$STAGE" == "suggest" ]]; then
     STAGE="suggest"; setup_report_paths

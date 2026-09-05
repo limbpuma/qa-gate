@@ -52,6 +52,13 @@ sarif_write() {
   node "$LIB_DIR/sarif.js" "$JSON_FILE_LATEST" "$REPO_PATH" "$SARIF_FILE" "$(installed_version)" >>"$LOG_FILE" 2>&1 || log_warn "sarif not written — see log"
 }
 
+# One line per run in qa-report/history.jsonl (numbers and ids only), unless report.history is false.
+history_file() { printf '%s' "$REPO_PATH/$REPORT_DIR/history.jsonl"; }
+history_append() {
+  [[ "$(cfg_get ".report.history")" == "false" ]] && return 0
+  node "$LIB_DIR/history.js" append "$JSON_FILE_LATEST" "$REPO_PATH" "$(history_file)" >>"$LOG_FILE" 2>&1 || log_warn "history not written — see log"
+}
+
 # JSON verdict (schema 1) + a stable "-latest.json" copy.
 write_verdict() {
   local records

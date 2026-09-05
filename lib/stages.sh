@@ -168,6 +168,7 @@ run_web_stage() {
   local body="$1"
   if ! web_configured; then run_check "$STAGE" false mark_skip "web.baseUrl not configured"; return 0; fi
   if ! web_start_app; then run_check "$STAGE" true mark_fail "app not reachable at $(web_base_url) — see log"; return 0; fi
+  web_resolve_paths
   "$body"
   web_stop_app
 }
@@ -213,6 +214,7 @@ run_stage_inner() {
   STAGE_DURATION=$(( $(date +%s) - started ))
   write_verdict
   sarif_write
+  history_append
 }
 
 # all = pre-commit → pr → build → staging → compliance, stops at the first FAIL.

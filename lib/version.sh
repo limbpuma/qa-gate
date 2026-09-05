@@ -59,4 +59,5 @@ update_pin() {
   ' "$cfg" "$installed")
   if [[ "$previous" == "$installed" ]]; then printf 'gateVersion %s unchanged\n' "$installed"
   else printf 'gateVersion %s (was %s) → %s — commit it on %s\n' "$installed" "${previous:-unpinned}" "$CONFIG_FILE_NAME" "${BASE_REF:-the base branch}"; fi
+  history_gitignore_sync "$(history_commit_wanted)"
 }

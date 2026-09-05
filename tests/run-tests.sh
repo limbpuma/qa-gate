@@ -279,7 +279,9 @@ test_ai_register() {
   ' "$dest/package.json"
   out=$(run_gate "$dest" pr --no-docker --only ai-register) && { fail "$label" "missing register did not FAIL"; return; }
   grep -qE '^FAIL[[:space:]]+ai-register' <<< "$out" || { fail "$label" "no FAIL ai-register line · $(printf '%s' "$out" | head -4)"; return; }
-  run_gate "$dest" init | grep -q "AI-ACT-REGISTER" || { fail "$label" "init did not write the register"; return; }
+  # Why capture first: `gate | grep -q` under pipefail races — grep exits on the match and the gate dies of SIGPIPE.
+  out=$(run_gate "$dest" init)
+  grep -q "AI-ACT-REGISTER" <<< "$out" || { fail "$label" "init did not write the register"; return; }
   out=$(run_gate "$dest" pr --no-docker --only ai-register) || { fail "$label" "register with placeholders should not block"; return; }
   grep -qE '^WARN[[:space:]]+ai-register' <<< "$out" || { fail "$label" "expected WARN with [TODO] placeholders · $(grep ai-register <<< "$out")"; return; }
   pass "$label"
@@ -416,6 +418,42 @@ test_gate_version_pin() {
   pass "$label"
 }
 
+test_sitemap_paths() {
+  local label="T19.sitemap" dest out
+  dest=$(prep_fixture_repo web)
+  cfg_set "$dest/qa-gate.config.json" 'j.web.paths = "sitemap"'
+  # portfolio-demo caps at 10 of the 40 sitemap URLs; "/", Impressum and Datenschutz are always among them.
+  out=$(run_gate "$dest" compliance --only axe --profile portfolio-demo) || { fail "$label" "axe over sitemap pages failed · $(grep -E 'axe|compliance' <<< "$out")"; return; }
+  node -e '
+    const j = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+    const paths = j.pages.map((p) => new URL(p.url).pathname);
+    const ok = paths.length === 10 && ["/", "/impressum", "/datenschutz"].every((p) => paths.includes(p)) && paths.some((p) => /^\/seite-\d+$/.test(p));
+    if (!ok) { process.stdout.write(paths.join(",")); process.exit(1); }
+  ' "$dest/qa-report/axe.json" || { fail "$label" "expected 10 sitemap pages incl. legal ones · $(node -e 'const j=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"));console.log(j.pages.map((p)=>new URL(p.url).pathname).join(","))' "$dest/qa-report/axe.json")"; return; }
+  pass "$label"
+}
+
+test_history_trend() {
+  local label="T20.history" dest out history
+  dest=$(prep_fixture_repo node)
+  history="$dest/qa-report/history.jsonl"
+  run_gate "$dest" init >/dev/null || { fail "$label" "init failed"; return; }
+  run_gate "$dest" pre-commit --only secrets >/dev/null || { fail "$label" "run 1 failed"; return; }
+  run_gate "$dest" pre-commit --only secrets >/dev/null || { fail "$label" "run 2 failed"; return; }
+  [[ "$(grep -c '' "$history")" == "2" ]] || { fail "$label" "expected 2 history lines, got $(grep -c '' "$history" 2>/dev/null)"; return; }
+  grep -q '"stage":"pre-commit"' "$history" || { fail "$label" "history line lacks the stage"; return; }
+  out=$(run_gate "$dest" trend 2) || { fail "$label" "trend exit $?"; return; }
+  [[ "$(line_count "$out")" == "3" ]] || { fail "$label" "trend should print a header and 2 rows · $out"; return; }
+  grep -qE 'pre-commit[[:space:]]+portfolio-demo[[:space:]]+PASS' <<< "$out" || { fail "$label" "trend row wrong · $out"; return; }
+  # portfolio-demo keeps the history local; a client profile commits it (update syncs the .gitignore exception).
+  (cd "$dest" && git check-ignore -q qa-report/history.jsonl) || { fail "$label" "history should be ignored in portfolio-demo"; return; }
+  printf 'DEPLOY_PROFILE=mvp-client\n' > "$dest/.env"
+  out=$(run_gate "$dest" update)
+  grep -q 'history.jsonl' <<< "$out" || { fail "$label" "update did not add the history exception · $out"; return; }
+  (cd "$dest" && git check-ignore -q qa-report/history.jsonl) && { fail "$label" "history still ignored in mvp-client"; return; }
+  pass "$label"
+}
+
 # --- Runner ----------------------------------------------------------------
 ensure_node_fixture_deps
 for fixture in node go python; do test_pre_commit_passes "$fixture"; done
@@ -434,7 +472,12 @@ test_suggest_without_ai_falls_back
 test_sector_packs
 test_waivers
 test_gate_version_pin
+test_sitemap_paths
+test_history_trend
 if node "$SCRIPT_DIR/../scripts/validate-packs.mjs" >/dev/null 2>&1; then pass "T15.packs-valid"; else fail "T15.packs-valid" "$(node "$SCRIPT_DIR/../scripts/validate-packs.mjs" 2>&1 | grep -A3 FAIL | head -6)"; fi
+# Every legal rule has a fixture pair, and each pair proves the rule (pass.html → PASS, fail.html → FAIL/WARN).
+if out=$(node "$SCRIPT_DIR/../scripts/validate-rules.mjs" 2>&1); then pass "T21.rules-have-fixtures"; else fail "T21.rules-have-fixtures" "$(head -4 <<< "$out")"; fi
+if out=$(node "$SCRIPT_DIR/../scripts/rule-fixtures.mjs" 2>&1); then pass "T22.rule-fixtures ($(tail -1 <<< "$out"))"; else fail "T22.rule-fixtures" "$(grep '^FAIL' <<< "$out" | head -5)"; fi
 
 printf '\n%s passed, %s failed\n' "$PASSED" "$FAILED"
 (( FAILED == 0 ))
