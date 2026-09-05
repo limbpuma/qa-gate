@@ -1,7 +1,7 @@
 # .github/workflows/qa-gate.yml — the global quality gate on every push and PR, via the published Action.
-# No secrets needed: `uses: limbpuma/qa-gate@<tag>` checks out the same code every developer runs locally from
-# ~/.claude/scripts/qa-gate; bump the tag together with `gateVersion` in qa-gate.config.json (`qa-gate.sh update`).
-# Supply chain: third-party actions pinned to a commit SHA (comment = the tag it was resolved from).
+# No secrets needed: `uses: limbpuma/qa-gate@<sha>` checks out the same code every developer runs locally from
+# ~/.claude/scripts/qa-gate; bump the SHA together with `gateVersion` in qa-gate.config.json (`qa-gate.sh update`).
+# Supply chain: every action, the gate included, is pinned to a commit SHA (comment = the tag it was resolved from).
 name: qa-gate
 
 on:
@@ -51,13 +51,13 @@ jobs:
 
       - name: Gate — pr
         id: pr
-        uses: limbpuma/qa-gate@v0.6.0
+        uses: limbpuma/qa-gate@16b34f525f3864d6bc36b0764a06971d5c0c6315 # v0.6.0
         with:
           stage: pr
 
       - name: Gate — build
         if: hashFiles('Dockerfile', 'apps/*/Dockerfile') != ''
-        uses: limbpuma/qa-gate@v0.6.0
+        uses: limbpuma/qa-gate@16b34f525f3864d6bc36b0764a06971d5c0c6315 # v0.6.0
         with:
           stage: build
 
@@ -94,7 +94,7 @@ jobs:
         with:
           node-version: 22
       - name: Compliance against the live site
-        uses: limbpuma/qa-gate@v0.6.0
+        uses: limbpuma/qa-gate@16b34f525f3864d6bc36b0764a06971d5c0c6315 # v0.6.0
         with:
           stage: compliance
           base-url: ${{ vars.LIVE_URL }} # validated as https inside the action; never interpolated into a shell line

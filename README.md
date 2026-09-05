@@ -53,7 +53,8 @@ In GitHub Actions the same gate is one step, no secrets:
 ```
 
 `templates/ci.yml` is the full workflow (project toolchain, `build` when a Dockerfile exists, SARIF upload to the
-Security tab, monthly live compliance). `init` pins the installed gate version in the repo (`gateVersion`); bump
+Security tab, monthly live compliance); there the gate is pinned by commit SHA with the tag as a comment, like every
+other action, because a tag can be moved. `init` pins the installed gate version in the repo (`gateVersion`); bump
 it on purpose with `qa-gate.sh update` and keep the Action tag in step.
 
 Requirements: Git Bash (Windows) or bash (Linux), Node.js, git, curl. Docker for the security scanners and
