@@ -1,9 +1,16 @@
 # qa-gate — one deterministic quality gate for every repo
 
 `qa-gate.sh` runs the same checks on any Node, Go or Python repo, prints a summary block of at most
-25 lines, writes a JSON verdict and exits `0` (PASS) or `1` (FAIL). It lives once in the global stack
+25 lines, writes a JSON verdict and exits `0` (PASS) or `1` (FAIL). It lives once per machine
 (`~/.claude/scripts/qa-gate/`); a repo only carries `qa-gate.config.json`, a 3-line shim and a pre-commit hook.
-Claude Code skills, opencode agents and CI all run the script and read only its summary.
+Claude Code skills, opencode agents and CI all run the script and read only its summary. No LLM is involved.
+
+Public repo: https://github.com/limbpuma/qa-gate (CI clones it without any token). Install on a machine:
+
+```bash
+git clone https://github.com/limbpuma/qa-gate.git ~/.claude/scripts/qa-gate
+```
+Inside claude-stack the directory is a git subtree of that repo (`git subtree push --prefix=scripts/qa-gate qa-gate main`).
 
 Plan and rationale: `~/Documents/AI_FIRST/proyectos_resources/Core_DevOps_Engineer/docs/QA_PIPELINE_PLAN.md`.
 
@@ -166,8 +173,7 @@ planted AWS key and command injection for Semgrep. The node fixture installs its
 
 `templates/barrierefreiheit.md` (the § 19 BFSGV page copy, DE), `templates/BITV-SELBSTBEWERTUNG.md` (manual
 Prüfschritte per release), `templates/AI-ACT-REGISTER.md` (KI-VO register: system, risk class, Art. 50 measures,
-Art. 4 literacy, provider, logging), `templates/ci.yml` (GitHub Actions caller that fetches the gate from claude-stack;
-needs the `CLAUDE_STACK_TOKEN` secret).
+Art. 4 literacy, provider, logging), `templates/ci.yml` (GitHub Actions caller that clones the public gate repo; no secrets).
 
 ## Requirements
 

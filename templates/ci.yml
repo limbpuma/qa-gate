@@ -1,6 +1,6 @@
-# .github/workflows/ci.yml — runs the global quality gate on every push and PR.
-# Requires one repository secret: CLAUDE_STACK_TOKEN (read access to limbpuma/claude-stack).
-# The gate itself is not vendored into the repo: CI fetches the same version every developer runs.
+# .github/workflows/qa-gate.yml — runs the global quality gate on every push and PR.
+# No secrets needed: the gate is fetched from the public repo limbpuma/qa-gate, the same code every
+# developer runs locally from ~/.claude/scripts/qa-gate. The workflow never calls an LLM.
 name: qa-gate
 
 on:
@@ -15,14 +15,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # gate-config compares against the base branch
+          fetch-depth: 0 # gate-config and the Semgrep changed-files scope compare against the base branch
 
-      - name: Fetch qa-gate from claude-stack
+      - name: Fetch qa-gate
         run: |
-          git clone --depth 1 --filter=blob:none --sparse \
-            "https://x-access-token:${{ secrets.CLAUDE_STACK_TOKEN }}@github.com/limbpuma/claude-stack.git" "$HOME/claude-stack"
-          git -C "$HOME/claude-stack" sparse-checkout set scripts/qa-gate
-          echo "QA_GATE_HOME=$HOME/claude-stack/scripts/qa-gate" >> "$GITHUB_ENV"
+          git clone --depth 1 https://github.com/limbpuma/qa-gate.git "$HOME/qa-gate"
+          echo "QA_GATE_HOME=$HOME/qa-gate" >> "$GITHUB_ENV"
 
       - uses: actions/setup-node@v4
         with:
@@ -47,7 +45,7 @@ jobs:
           if [ -f pyproject.toml ]; then pip install -e . ruff pytest pytest-cov pip-audit; fi
           if [ -f go.mod ]; then go install golang.org/x/vuln/cmd/govulncheck@latest; fi
 
-      - name: Gate — pr (Docker available on ubuntu runners)
+      - name: Gate — pr (Docker is available on ubuntu runners)
         run: bash "$QA_GATE_HOME/qa-gate.sh" pr --repo "$GITHUB_WORKSPACE"
 
       - name: Gate — build

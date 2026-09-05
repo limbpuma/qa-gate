@@ -14,6 +14,11 @@ trap 'rm -rf "$TMP_ROOT"' EXIT
 readonly MAX_SUMMARY_LINES=25
 readonly RATCHET_INFLATION=30
 readonly FAKE_PAT_BODY_LENGTH=82
+# Fake AWS credentials for the Semgrep tests, split so no scanner-shaped literal lives in the repo.
+readonly FAKE_AWS_ID_PREFIX="AKIA"
+readonly FAKE_AWS_ID_BODY="Q7X4K2M9P3N8L5J6"
+readonly FAKE_AWS_SECRET_HEAD="wJalrXUtnFEMI/K7MDENG/"
+readonly FAKE_AWS_SECRET_TAIL="bPxRfiCYzQ7X4K2M9P3N8L"
 
 PASSED=0
 FAILED=0
@@ -173,7 +178,8 @@ test_docker_audit_and_semgrep() {
   (cd "$dest" && npm install --silent --no-audit --no-fund >/dev/null 2>&1)
   # Planted findings for p/secrets: fake AWS key id + secret. Why not the AWS docs example key: the rule
   # ignores values containing EXAMPLE, and the community rulesets do not flag eval/child_process.
-  printf 'const AWS_ACCESS_KEY_ID = "AKIAQ7X4K2M9P3N8L5J6";\nconst AWS_SECRET = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYzQ7X4K2M9P3N8L";\n' > "$dest/src/planted-bad.js"
+  # Why assembled at runtime: the literal would trip GitHub push protection on this public repo.
+  printf 'const AWS_ACCESS_KEY_ID = "%s%s";\nconst AWS_SECRET = "%s%s";\n' "$FAKE_AWS_ID_PREFIX" "$FAKE_AWS_ID_BODY" "$FAKE_AWS_SECRET_HEAD" "$FAKE_AWS_SECRET_TAIL" > "$dest/src/planted-bad.js"
   (cd "$dest" && git_quiet add -A && git_commit_quiet -m "plant vulnerable dep and eval")
   out=$(run_gate "$dest" pr --only audit,semgrep) && { fail "$label" "expected FAIL"; return; }
   grep -qE '^FAIL[[:space:]]+audit' <<< "$out" || { fail "$label" "no FAIL audit line · $(printf '%s' "$out" | head -6)"; return; }
@@ -182,7 +188,7 @@ test_docker_audit_and_semgrep() {
   # 7c: on a branch Semgrep scans only the changed files and must still find a key planted there.
   dest=$(prep_fixture_repo node)
   (cd "$dest" && git_quiet checkout -b feat/planted)
-  printf 'const AWS_ACCESS_KEY_ID = "AKIAQ7X4K2M9P3N8L5J6";\n' > "$dest/src/planted-branch.js"
+  printf 'const AWS_ACCESS_KEY_ID = "%s%s";\n' "$FAKE_AWS_ID_PREFIX" "$FAKE_AWS_ID_BODY" > "$dest/src/planted-branch.js"
   (cd "$dest" && git_quiet add -A && git_commit_quiet -m "plant on branch")
   out=$(run_gate "$dest" pr --only semgrep) && { fail "$label" "branch scan did not FAIL on the planted key"; return; }
   grep -qE '^FAIL[[:space:]]+semgrep[[:space:]]+[1-9].*changed files vs master' <<< "$out" || { fail "$label" "branch scan not scoped or no finding · $(grep semgrep <<< "$out")"; return; }
