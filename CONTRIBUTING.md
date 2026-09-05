@@ -16,7 +16,7 @@ applies to humans and to coding agents alike.
 - **Not legal advice.** State what a rule verifies (presence, technique, dates), never that a site is "konform".
   What a tool cannot verify goes into a pack's `manual`; what a lawyer must settle goes into `pruefen`.
 - Code in English, German for user-facing legal wording. Conventional commits (`feat:`, `fix:`, `docs:`, `test:`).
-- Licence: PolyForm Noncommercial 1.0.0. By contributing you agree your contribution is licensed the same way.
+- Licence: MIT. By contributing you agree your contribution is licensed the same way.
 
 ## Adding a legal rule
 

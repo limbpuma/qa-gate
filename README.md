@@ -1,7 +1,7 @@
 # qa-gate
 
 [![qa-gate](https://github.com/limbpuma/qa-gate/actions/workflows/qa-gate.yml/badge.svg)](https://github.com/limbpuma/qa-gate/actions/workflows/qa-gate.yml)
-[![License: PolyForm Noncommercial 1.0.0](https://img.shields.io/badge/license-PolyForm%20Noncommercial-blue.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 **One quality gate for every repo. Deterministic. German-market compliance built in. No LLM in the loop.**
 
@@ -128,5 +128,5 @@ data-protection law.** The person or agent who runs the gate remains responsible
 
 ## License
 
-[PolyForm Noncommercial 1.0.0](LICENSE): free to use, copy, modify and share for noncommercial purposes;
-commercial use needs written permission from the copyright holder. Third-party components in [NOTICE](NOTICE).
+[MIT](LICENSE). Use it, fork it, ship it with your clients. Third-party components and their licences are listed in
+[NOTICE](NOTICE); the legal rules and sector packs come with their sources, not with a warranty.
