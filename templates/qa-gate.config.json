@@ -183,9 +183,9 @@
     "pa11y": {
       "standard": "WCAG2AA",
       "runners": [
-        "axe",
         "htmlcs"
-      ]
+      ],
+      "wait": 1500
     },
     "axe": {
       "tags": [

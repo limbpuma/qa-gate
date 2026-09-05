@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# lib/web/pa11y.sh — Pa11y (axe + htmlcs engines, WCAG 2.1 AA) per URL (staging stage).
+# lib/web/pa11y.sh — Pa11y (htmlcs engine by default, WCAG 2.1 AA) per URL (staging stage).
+# Why htmlcs only: the compliance stage already runs axe-core through Playwright; running axe a second time inside
+# Pa11y counted the same issues twice with a different timing and disagreed with itself on live sites.
 # Sourced by qa-gate.sh.
 
 readonly PA11Y_REPORT="qa-report/pa11y.json"
@@ -14,6 +16,9 @@ pa11y_check() {
   bin=$(pa11y_bin)
   [[ -z "$bin" ]] && { mark_skip "pa11y not installed (npm i -g pa11y)"; return 0; }
   standard=$(cfg_get ".web.pa11y.standard"); standard="${standard:-WCAG2AA}"
+  # Why wait: fonts and reveal animations settle after load; evaluated too early, contrast and visibility lie.
+  local wait_ms
+  wait_ms=$(cfg_get ".web.pa11y.wait"); wait_ms="${wait_ms:-1500}"
   runners=$(node -e 'process.stdout.write(JSON.parse(process.argv[1]||"[]").map((r)=>"--runner "+r).join(" "))' "$(cfg_get ".web.pa11y.runners")")
   ensure_dir "$REPO_PATH/qa-report"
   : > "$REPO_PATH/$PA11Y_REPORT.tmp"
@@ -21,7 +26,7 @@ pa11y_check() {
     [[ -z "$url" ]] && continue
     pages=$((pages + 1))
     # shellcheck disable=SC2086
-    out=$("$bin" --reporter json --standard "$standard" $runners "$url" 2>>"$LOG_FILE") || true
+    out=$("$bin" --reporter json --standard "$standard" --wait "$wait_ms" $runners "$url" 2>>"$LOG_FILE") || true
     [[ -z "$out" ]] && out="[]"
     printf '{"url":"%s","issues":%s}\n' "$url" "$out" >> "$REPO_PATH/$PA11Y_REPORT.tmp"
   done < <(web_urls)

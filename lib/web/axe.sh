@@ -15,18 +15,20 @@ axe_check() {
     --block-impacts "$(cfg_get ".web.axe.blockImpacts")" \
     $urls >>"$LOG_FILE" 2>&1 || true
   [[ -f "$REPO_PATH/$AXE_REPORT" ]] || { mark_fail "axe produced no report — see log"; return 0; }
-  local blocking warnings pages
-  read -r blocking warnings pages <<< "$(node -e '
+  local blocking warnings review pages
+  read -r blocking warnings review pages <<< "$(node -e '
     const j = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
-    process.stdout.write([j.totals.blocking, j.totals.warnings, j.pages.length].join(" "));
+    process.stdout.write([j.totals.blocking, j.totals.warnings, j.totals.review || 0, j.pages.length].join(" "));
   ' "$REPO_PATH/$AXE_REPORT")"
   R_REPORT="$AXE_REPORT"
-  R_COUNT_JSON="{\"blocking\":$blocking,\"warnings\":$warnings,\"pages\":$pages}"
+  R_COUNT_JSON="{\"blocking\":$blocking,\"warnings\":$warnings,\"review\":${review:-0},\"pages\":$pages}"
+  local review_note=""
+  if (( review > 0 )); then review_note=", $review to review by hand"; fi
   if (( blocking > 0 )); then
-    mark_fail "$blocking serious/critical, $warnings warnings on $pages pages → $AXE_REPORT"
+    mark_fail "$blocking serious/critical, $warnings warnings on $pages pages$review_note → $AXE_REPORT"
   elif (( warnings > 0 )); then
-    mark_warn "0 blocking, $warnings warnings (WCAG 2.2) on $pages pages → $AXE_REPORT"
+    mark_warn "0 blocking, $warnings warnings (WCAG 2.2) on $pages pages$review_note → $AXE_REPORT"
   else
-    mark_pass "0 violations on $pages pages (EN 301 549 / WCAG 2.1 AA)"
+    mark_pass "0 violations on $pages pages (EN 301 549 / WCAG 2.1 AA)$review_note"
   fi
 }

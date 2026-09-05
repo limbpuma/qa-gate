@@ -31,13 +31,17 @@ lighthouse_check() {
     --work "$REPO_PATH/$LIGHTHOUSE_WORK_DIR" \
     --out "$REPO_PATH/$LIGHTHOUSE_REPORT" \
     --thresholds "$(cfg_get ".web.lighthouse.thresholds")" >>"$LOG_FILE" 2>&1 || { mark_fail "lighthouse aggregation failed — see log"; return 0; }
-  local failing total worst
-  read -r failing total worst <<< "$(node -e '
+  local failing total unmeasured worst reason
+  read -r failing total unmeasured worst <<< "$(node -e '
     const j = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
-    process.stdout.write([j.totals.failing, j.totals.measured, j.totals.worst].join(" "));
+    process.stdout.write([j.totals.failing, j.totals.measured, j.totals.unmeasured || 0, j.totals.worst].join(" "));
   ' "$REPO_PATH/$LIGHTHOUSE_REPORT")"
+  reason=$(node -e 'const j = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")); const u = (j.unmeasured || [])[0]; process.stdout.write(u ? `${u.category} on ${new URL(u.url).pathname} ${u.formFactor}: ${u.reason}` : "");' "$REPO_PATH/$LIGHTHOUSE_REPORT")
   R_REPORT="$LIGHTHOUSE_REPORT"
-  R_COUNT_JSON="{\"failing\":$failing,\"measured\":$total}"
+  R_COUNT_JSON="{\"failing\":$failing,\"measured\":$total,\"unmeasured\":${unmeasured:-0}}"
   if (( failing > 0 )); then mark_fail "$failing/$total category scores below threshold (worst: $worst) → $LIGHTHOUSE_REPORT"
+  # Why WARN: NO_LCP usually means the hero starts invisible (reveal animation); the fix is on the page, but the
+  # number is not "slow" and must not read as one.
+  elif (( unmeasured > 0 )); then mark_warn "$unmeasured not measurable ($reason); $total scores ≥ thresholds"
   else mark_pass "$total category scores ≥ thresholds (median of $runs, worst: $worst)"; fi
 }

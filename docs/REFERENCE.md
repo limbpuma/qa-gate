@@ -46,8 +46,8 @@ Exit codes: `0` PASS · `1` FAIL · `3` usage or internal error. `deploy` prints
 | build | `docker-build` | yes | `docker build` of the first Dockerfile (`build.dockerfile`, `./Dockerfile`, `apps/*/Dockerfile`) |
 | build | `trivy-image` | yes | Trivy on the built image; FAIL on HIGH/CRITICAL |
 | build | `sbom` | no | CycloneDX SBOM → `qa-report/sbom.cdx.json` |
-| staging | `pa11y` | yes | Pa11y (axe + htmlcs, `web.pa11y.standard`) on every `web.paths` URL; FAIL on any error → `qa-report/pa11y.json` |
-| staging | `lighthouse` | yes | Lighthouse CI, `web.lighthouse.runs` runs per URL and form factor, **median** per category vs `thresholds` → `qa-report/lighthouse.json` (raw runs in `qa-report/_lighthouse/`) |
+| staging | `pa11y` | yes | Pa11y with the htmlcs engine (WCAG techniques; axe runs once, in `compliance`), `web.pa11y.standard`, waits `web.pa11y.wait` ms for fonts and animations, on every `web.paths` URL; FAIL on any error → `qa-report/pa11y.json` |
+| staging | `lighthouse` | yes | Lighthouse CI, `web.lighthouse.runs` runs per URL and form factor, **median** per category vs `thresholds` → `qa-report/lighthouse.json` (raw runs in `qa-report/_lighthouse/`). A page where Lighthouse finds no LCP element (`NO_LCP`, typically a hero that starts at opacity 0) is reported as **WARN "not measurable"**, never as performance 0 |
 | staging | `e2e` | yes | the repo's `test:e2e` script (or `commands.<stack>.e2e`) with `E2E_BASE_URL` / `PLAYWRIGHT_BASE_URL` set; SKIP when undefined |
 | staging | `nuclei` | yes | Docker Nuclei, `web.nuclei.templates` at `severity`; the container reaches the host app through `host.docker.internal` → `qa-report/nuclei.jsonl` |
 | compliance | `axe` | yes | axe-core via Playwright with `web.axe.tags` (WCAG 2.1 AA + `EN-301-549`); `warnTags` (WCAG 2.2) only warn; FAIL on serious/critical → `qa-report/axe.json` |
@@ -113,7 +113,7 @@ A waived check carries `"status": "WARN"` and `"waiver": { "check", "until", "by
 | `web.baseUrl` / `paths` / `startCommand` / `readyPath` / `startTimeoutSec` | `""` / `["/"]` / `""` / `/` / 90 | target app for staging + compliance; empty baseUrl → both stages SKIP; `paths: "sitemap"` reads `/sitemap.xml` |
 | `web.sitemapMaxPages` / `profiles.<p>.sitemapMaxPages` | 10 / 0 · 10 · 30 · 100 | page cap when `paths` is `"sitemap"`; `/`, Impressum and Datenschutz always included |
 | `web.lighthouse.runs` / `formFactors` / `thresholds` | 3 / mobile+desktop / perf 80 · a11y 95 · best-practices 90 · seo 90 | median of the runs must reach every threshold |
-| `web.pa11y.standard` / `runners` | `WCAG2AA` / axe + htmlcs | |
+| `web.pa11y.standard` / `runners` / `wait` | `WCAG2AA` / htmlcs / 1500 | add `axe` to `runners` only if you want axe counted twice |
 | `web.axe.tags` / `warnTags` / `blockImpacts` | WCAG 2.1 AA + EN-301-549 / wcag22aa / serious, critical | |
 | `web.nuclei.enabled` / `image` / `templates` / `severity` | true / pinned / misconfiguration + exposures / high,critical | |
 | `legal.ai.enabled` / `chatSelector` / `disclosureText` / `providers` / `registerPath` | `auto` / `""` / KI-Regex / `[]` / `docs/AI-ACT-REGISTER.md` | `auto` = AI checks run when `chatSelector` is set; list providers the backend calls (not visible on the wire) in `providers` |
