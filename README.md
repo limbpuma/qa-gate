@@ -47,7 +47,7 @@ bash scripts/qa-gate.sh all             # before shipping: every stage, stops at
 In GitHub Actions the same gate is one step, no secrets:
 
 ```yaml
-- uses: limbpuma/qa-gate@v0.6.0
+- uses: limbpuma/qa-gate@v0.7.0
   with:
     stage: pr
 ```
