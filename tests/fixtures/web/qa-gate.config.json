@@ -36,7 +36,13 @@
       "providers": [
         "MiniMax"
       ]
-    }
+    },
+    "features": [
+      "shop",
+      "food",
+      "forms"
+    ],
+    "widerrufPath": "/widerruf"
   },
   "profile": "mvp-client"
 }

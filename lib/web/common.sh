@@ -11,7 +11,15 @@ readonly DOCKER_HOST_ALIAS="host.docker.internal"
 
 WEB_APP_STARTED=0
 
-web_base_url() { cfg_get ".web.baseUrl" | sed 's#/*$##'; }
+# --base-url wins over the config; it also means "the site is live, never start or stop anything".
+web_base_url() {
+  if [[ -n "${BASE_URL_OVERRIDE:-}" ]]; then printf '%s' "${BASE_URL_OVERRIDE%/}"; return 0; fi
+  cfg_get ".web.baseUrl" | sed 's#/*$##'
+}
+web_is_live_target() { [[ -n "${BASE_URL_OVERRIDE:-}" ]]; }
+web_paths_json() {
+  if [[ -n "${PATHS_OVERRIDE:-}" ]]; then printf '%s' "$PATHS_OVERRIDE"; else cfg_get ".web.paths"; fi
+}
 
 # Absolute URLs from web.paths (default "/").
 web_urls() {
@@ -20,7 +28,7 @@ web_urls() {
   node -e '
     const paths = JSON.parse(process.argv[2] || "[]");
     for (const p of (paths.length ? paths : ["/"])) console.log(process.argv[1] + (p.startsWith("/") ? p : "/" + p));
-  ' "$base" "$(cfg_get ".web.paths")"
+  ' "$base" "$(web_paths_json)"
 }
 
 # Installs the gate's own node toolchain (playwright, axe, lhci) once; browsers on first need.
@@ -55,6 +63,7 @@ web_start_app() {
   base=$(web_base_url)
   ready="$base$(cfg_get ".web.readyPath")"
   if web_is_ready "$ready"; then log_info "app already running at $base"; return 0; fi
+  if web_is_live_target; then log_error "live target $base does not answer"; return 1; fi
   cmd=$(cfg_get ".web.startCommand")
   [[ -z "$cmd" ]] && { log_error "app not reachable at $ready and web.startCommand is empty"; return 1; }
   timeout=$(cfg_get ".web.startTimeoutSec"); timeout="${timeout:-90}"

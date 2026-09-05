@@ -7,6 +7,9 @@ on:
   push:
     branches: [main, master]
   pull_request:
+  schedule:
+    - cron: '17 6 1 * *' # monthly live compliance drift check (needs the LIVE_URL repository variable)
+  workflow_dispatch:
 
 jobs:
   gate:
@@ -62,3 +65,31 @@ jobs:
             qa-report/*.md
             qa-report/_logs/*.log
           retention-days: 14
+
+  live-compliance:
+    # Runs against the production URL (repository variable LIVE_URL) on the monthly schedule or by hand.
+    if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && vars.LIVE_URL != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch qa-gate + browser toolchain
+        run: |
+          git clone --depth 1 https://github.com/limbpuma/qa-gate.git "$HOME/qa-gate"
+          cd "$HOME/qa-gate" && npm install --silent --no-audit --no-fund && npx playwright install --with-deps chromium
+          echo "QA_GATE_HOME=$HOME/qa-gate" >> "$GITHUB_ENV"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Compliance against the live site
+        run: bash "$QA_GATE_HOME/qa-gate.sh" compliance --repo "$GITHUB_WORKSPACE" --base-url "${{ vars.LIVE_URL }}"
+      - name: Upload evidence bundle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: compliance-evidence
+          path: |
+            qa-report/compliance-*.md
+            qa-report/compliance-scan.json
+            qa-report/axe.json
+          retention-days: 400

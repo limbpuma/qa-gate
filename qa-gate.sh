@@ -40,6 +40,8 @@ Options:
   --no-docker              Docker-based checks are SKIP instead of FAIL
   --verbose                also stream the log to stderr
   --json-only              print only the JSON verdict path
+  --base-url <url>         staging/compliance against a LIVE site: no app start/stop, evidence marked live
+  --paths <json>           override web.paths for this run (e.g. '["/","/preise"]')
   -h | --help
 
 Exit codes: 0 PASS · 1 FAIL · 3 usage / internal error
@@ -48,6 +50,8 @@ USAGE
 
 STAGE=""
 REPO_ARG=""
+BASE_URL_OVERRIDE=""
+PATHS_OVERRIDE=""
 INIT_WEB=""
 JSON_ONLY=0
 
@@ -62,6 +66,8 @@ parse_args() {
       --verbose)             VERBOSE=1; shift ;;
       --json-only)           JSON_ONLY=1; shift ;;
       --web)                 INIT_WEB=1; shift ;;
+      --base-url)            BASE_URL_OVERRIDE="${2:?--base-url needs a URL}"; shift 2 ;;
+      --paths)               PATHS_OVERRIDE="${2:?--paths needs a JSON array}"; shift 2 ;;
       -h|--help)             print_usage; exit "$EXIT_PASS" ;;
       *) printf 'qa-gate: unknown argument: %s\n' "$1" >&2; print_usage >&2; exit "$EXIT_USAGE" ;;
     esac

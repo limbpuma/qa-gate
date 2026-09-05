@@ -8,6 +8,7 @@ evidence_check() {
     --repo "$REPO_PATH" \
     --out "$REPO_PATH/$out" \
     --base "$(web_base_url)" \
+    --target "$(web_is_live_target && printf live || printf local)" \
     --stage-json "$JSON_FILE_LATEST" >>"$LOG_FILE" 2>&1 || { mark_warn "evidence bundle not written — see log"; return 0; }
   R_REPORT="$out"
   mark_pass "evidence bundle → $out"

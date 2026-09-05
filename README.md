@@ -62,6 +62,8 @@ qa-gate.sh init [--web]
 --no-docker              Docker-based checks are SKIP instead of FAIL (never in CI)
 --verbose                also stream the log to stderr
 --json-only              print only the JSON verdict path
+--base-url <url>         staging/compliance against a LIVE site: nothing is started or stopped, evidence marked live
+--paths <json>           override web.paths for this run, e.g. '["/","/preise"]'
 ```
 
 Exit codes: `0` PASS · `1` FAIL · `3` usage or internal error. `deploy` prints SKIP until phase F4.
@@ -90,7 +92,7 @@ Exit codes: `0` PASS · `1` FAIL · `3` usage or internal error. `deploy` prints
 | staging | `e2e` | yes | the repo's `test:e2e` script (or `commands.<stack>.e2e`) with `E2E_BASE_URL` / `PLAYWRIGHT_BASE_URL` set; SKIP when undefined |
 | staging | `nuclei` | yes | Docker Nuclei, `web.nuclei.templates` at `severity`; the container reaches the host app through `host.docker.internal` → `qa-report/nuclei.jsonl` |
 | compliance | `axe` | yes | axe-core via Playwright with `web.axe.tags` (WCAG 2.1 AA + `EN-301-549`); `warnTags` (WCAG 2.2) only warn; FAIL on serious/critical → `qa-report/axe.json` |
-| compliance | `legal` | yes | `compliance-scan.mjs`: Impressum/Datenschutz/`/barrierefreiheit` reachable and linked, statement names EN 301 549 + contact, no remote fonts or third-party hosts before consent, no tracking cookies before consent, reject button as prominent as accept (when `legal.consent.required`), `<html lang>`, security headers, checkout MwSt/Zahlungspflichtig/AGB/Widerruf (when `legal.checkoutPath`), **AI Act**: `ai.disclosure` (visible "KI" notice inside `legal.ai.chatSelector`, Art. 50 Abs. 1), `ai.content-label` (every `[data-ai-generated]` element carries a visible label, Art. 50 Abs. 2/4), `ai.datenschutz-provider` (the Datenschutzerklärung names every AI provider configured or observed on the wire, DSGVO Art. 13), `ai.human-path` (tel:/mailto:/Kontakt next to the AI, DSGVO Art. 22 Abs. 3, WARN) → `qa-report/compliance-scan.json` |
+| compliance | `legal` | yes | the rule registry `lib/web/legal/rules.json` (28 rules, each with law, validity dates, profiles and required features): legal pages reachable and linked on **every** audited page, Impressum fields (address, e-mail, legal form, no TMG wording), remote fonts at any time, third parties and tracking cookies before consent, banner symmetry, a permanent consent-settings link, the reject path (nothing third-party after Ablehnen), every post-consent third party named in the Datenschutzerklärung, security headers, `<html lang>`, checkout duties, shop duties when `legal.features` has `shop` (delivery costs, Lieferzeit, Muster-Widerrufsformular, 30-day lowest price on struck prices), allergens with `food`, form privacy hints with `forms`, newsletter double opt-in with `newsletter`, VSBG § 36 statement, obsolete ODR link, and the four AI Act checks. Rules outside the profile or feature set are recorded as SKIP with the reason. A `legal.rules-stale` WARN appears when the registry's quarterly review date has passed → `qa-report/compliance-scan.json` |
 | compliance | `evidence` | no | `qa-report/compliance-<date>.md`: the dated bundle for the client's DSB (axe, Pa11y, Lighthouse, legal table, Nuclei, manual BITV part) |
 
 With several stacks in one repo, per-stack ids read `typecheck@go`, `unit@python`, and so on.
@@ -146,7 +148,9 @@ Everything else (tool output, debug) is in the log file, never on stdout.
 | `web.axe.tags` / `warnTags` / `blockImpacts` | WCAG 2.1 AA + EN-301-549 / wcag22aa / serious, critical | |
 | `web.nuclei.enabled` / `image` / `templates` / `severity` | true / pinned / misconfiguration + exposures / high,critical | |
 | `legal.ai.enabled` / `chatSelector` / `disclosureText` / `providers` / `registerPath` | `auto` / `""` / KI-Regex / `[]` / `docs/AI-ACT-REGISTER.md` | `auto` = AI checks run when `chatSelector` is set; list providers the backend calls (not visible on the wire) in `providers` |
-| `legal.*Path` / `checkoutPath` / `allowedHosts` / `consent` / `requiredHeaders` | `/impressum` `/datenschutz` `/barrierefreiheit` / `""` / `[]` / not required, DE+EN button texts / CSP, nosniff, X-Frame, Referrer-Policy | the legal scan inputs; add first-party CDN hosts to `allowedHosts` |
+| `legal.*Path` / `checkoutPath` / `allowedHosts` / `consent` / `requiredHeaders` | `/impressum` `/datenschutz` `/barrierefreiheit` `/agb` `/widerruf` / `""` / `[]` / not required, DE+EN button texts, settings-link texts / CSP, nosniff, X-Frame, Referrer-Policy | the legal scan inputs; add first-party CDN hosts to `allowedHosts` |
+| `legal.features` | `[]` | enables feature-bound rules: `shop`, `food`, `forms`, `newsletter` (AI rules key off `legal.ai`) |
+| `legal.impressum.requiredPatterns` | `[]` | extra regexes the Impressum must contain (e.g. `HRB`, `USt-IdNr`) |
 | `report.dir` / `keepLogs` | `qa-report` / 10 | where verdicts and logs go; older logs per stage are pruned |
 
 ## Adding a stack
@@ -168,6 +172,19 @@ alt, AI chat without disclosure) that must FAIL `compliance`; T10 covers the `ai
 fixture (pre-commit and pr), a planted GitHub token blocking without leaking, the coverage ratchet, gate-config
 tampering, `init` idempotency and the installed hook, and, when Docker is up, a vulnerable dependency plus a
 planted AWS key and command injection for Semgrep. The node fixture installs its own `node_modules` once.
+
+## Live sites and legal watch (no tokens)
+
+- `qa-gate.sh compliance --base-url https://example.de` audits the site people actually see. `/ship` runs it after
+  a deploy on mvp-client/production profiles and commits the evidence bundle (`Target: … (live)`).
+- `scripts/live-compliance.sh [registry]` runs that for every entry of `~/.claude/qa-gate/live-sites.json`
+  (`[{ "repo", "url", "paths" }]`). Scheduled weekly on Windows as task `QaGate-LiveCompliance`; repos on GitHub get
+  the same from the workflow's monthly `schedule` once the `LIVE_URL` repository variable exists.
+- `scripts/legal-watch.sh` fetches the `source` page of every rule in `lib/web/legal/rules.json`, normalises and
+  hashes it, and writes `~/.claude/qa-gate/legal-watch/pending/<rule>.diff` when it changed. Scheduled weekly as
+  `QaGate-LegalWatch`. The Claude Code command `/legal-review` reads only the pending diffs, drafts the rule change
+  on a branch of this repo with the source quoted and opens a PR; merging is a human decision. `rules.json`
+  carries `reviewedAt` / `reviewEveryMonths`; past the date the gate prints `WARN legal.rules-stale`.
 
 ## Templates for the German layer
 

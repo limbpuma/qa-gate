@@ -207,12 +207,16 @@
     "impressumPath": "/impressum",
     "datenschutzPath": "/datenschutz",
     "barrierefreiheitPath": "/barrierefreiheit",
+    "agbPath": "/agb",
+    "widerrufPath": "/widerruf",
     "checkoutPath": "",
+    "features": [],
     "allowedHosts": [],
     "consent": {
       "required": false,
       "acceptText": "Akzeptieren|Alle akzeptieren|Zustimmen|Accept",
-      "rejectText": "Ablehnen|Nur notwendige|Reject"
+      "rejectText": "Ablehnen|Nur notwendige|Reject",
+      "settingsText": "Cookie-Einstellungen|Cookie Einstellungen|Datenschutzeinstellungen|Einwilligung widerrufen|Privatsphäre-Einstellungen|Cookie settings|Privacy settings"
     },
     "requiredHeaders": [
       "content-security-policy",
@@ -220,6 +224,9 @@
       "x-frame-options",
       "referrer-policy"
     ],
+    "impressum": {
+      "requiredPatterns": []
+    },
     "ai": {
       "enabled": "auto",
       "chatSelector": "",

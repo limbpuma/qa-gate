@@ -224,9 +224,10 @@ test_web_compliance_blocks_bad_site() {
   node -e '
     const j = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
     const f = (id) => j.checks.find((c) => c.id === id);
-    process.exit(f("consent.google-fonts").status === "FAIL" && f("consent.banner").status === "FAIL" && f("headers.security").status === "FAIL"
-      && f("ai.disclosure").status === "FAIL" && f("ai.content-label").status === "FAIL" && f("ai.datenschutz-provider").status === "FAIL" ? 0 : 1);
-  ' "$dest/qa-report/compliance-scan.json" || { fail "$label" "expected FAIL on google-fonts, banner, headers and the three AI checks"; return; }
+    const failing = ["consent.google-fonts", "consent.banner", "headers.security", "ai.disclosure", "ai.content-label", "ai.datenschutz-provider",
+      "impressum.fields", "vsbg.odr-link", "consent.withdrawal-link"].filter((id) => f(id).status !== "FAIL");
+    if (failing.length) { process.stdout.write("not FAIL: " + failing.join(", ")); process.exit(1); }
+  ' "$dest/qa-report/compliance-scan.json" || { fail "$label" "expected FAIL on fonts, banner, headers, AI, Impressum fields, ODR link, withdrawal link"; return; }
   pass "$label"
 }
 

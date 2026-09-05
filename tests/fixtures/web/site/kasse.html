@@ -20,8 +20,8 @@
 <header><nav aria-label="Hauptnavigation"><a href="/">Start</a> · <a href="/speisekarte">Speisekarte</a></nav></header>
 <main id="main">
 <h1>Kasse</h1>
-<form onsubmit="return false"><label for="name">Name</label> <input id="name" name="name"><p>Gesamt: 8,50 € inkl. MwSt, zzgl. Lieferung. Es gelten unsere <a href="/agb">AGB</a> und die <a href="/widerruf">Widerrufsbelehrung</a>.</p><button type="submit">Zahlungspflichtig bestellen</button></form></main>
-<footer><nav aria-label="Rechtliches"><a href="/impressum">Impressum</a> · <a href="/datenschutz">Datenschutz</a> · <a href="/barrierefreiheit">Barrierefreiheit</a></nav></footer>
+<form onsubmit="return false"><label for="name">Name</label> <input id="name" name="name"> <label for="email">E-Mail</label> <input id="email" name="email" type="email"><p>Gesamt: 8,50 € inkl. MwSt, zzgl. Lieferkosten 2,50 €. Lieferzeit ca. 30 Minuten. Es gelten unsere <a href="/agb">AGB</a> und die <a href="/widerruf">Widerrufsbelehrung</a>. Hinweise zur Verarbeitung Ihrer Daten in der <a href="/datenschutz">Datenschutzerklärung</a>.</p><button type="submit">Zahlungspflichtig bestellen</button></form></main>
+<footer><nav aria-label="Rechtliches"><a href="/impressum">Impressum</a> · <a href="/datenschutz">Datenschutz</a> · <a href="/barrierefreiheit">Barrierefreiheit</a> · <a href="/agb">AGB</a> · <a href="/widerruf">Widerruf</a> · <button type="button" onclick="document.querySelector('.banner')?.removeAttribute('hidden')">Cookie-Einstellungen</button></nav></footer>
 <div class="banner" role="region" aria-label="Cookie-Einstellungen">
   <p>Wir verwenden nur technisch notwendige Cookies. Optionale Statistik-Cookies erst nach Ihrer Zustimmung.</p>
   <button type="button" onclick="this.parentElement.remove()">Alle akzeptieren</button>

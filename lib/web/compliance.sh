@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# lib/web/compliance.sh — German-market legal checks in a real browser (DDG/TMG, DSGVO, TTDSG, BFSG).
+# lib/web/compliance.sh — German-market legal rules (legal/rules.json) in a real browser.
+# The rule registry decides what runs: profile, legal.features and the rule's validity dates.
 # Sourced by qa-gate.sh.
 
 readonly COMPLIANCE_REPORT="qa-report/compliance-scan.json"
@@ -10,7 +11,8 @@ compliance_scan_check() {
     --out "$REPO_PATH/$COMPLIANCE_REPORT" \
     --base "$(web_base_url)" \
     --legal "$(cfg_get ".legal")" \
-    --paths "$(cfg_get ".web.paths")" >>"$LOG_FILE" 2>&1 || true
+    --paths "$(web_paths_json)" \
+    --profile "$PROFILE" >>"$LOG_FILE" 2>&1 || true
   [[ -f "$REPO_PATH/$COMPLIANCE_REPORT" ]] || { mark_fail "compliance scan produced no report — see log"; return 0; }
   local failed warned passed first_fail
   read -r failed warned passed <<< "$(node -e '
@@ -30,6 +32,6 @@ compliance_scan_check() {
   elif (( warned > 0 )); then
     mark_warn "$passed passed, $warned warnings → $COMPLIANCE_REPORT"
   else
-    mark_pass "$passed legal checks passed"
+    mark_pass "$passed legal checks passed ($PROFILE)"
   fi
 }
