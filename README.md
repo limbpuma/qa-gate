@@ -186,6 +186,24 @@ planted AWS key and command injection for Semgrep. The node fixture installs its
   on a branch of this repo with the source quoted and opens a PR; merging is a human decision. `rules.json`
   carries `reviewedAt` / `reviewEveryMonths`; past the date the gate prints `WARN legal.rules-stale`.
 
+## AI in the gate: advisory only, provider-agnostic, EU data policy
+
+The gate's verdicts are deterministic. AI is used only where judgment saves human work, and it proposes; a person
+merges. `lib/ai/providers.json` defines providers and a chain per context: **local** = Ollama (on-machine,
+$0, PII-safe) → MiniMax coding plan → DeepSeek; **CI** (`GITHUB_ACTIONS`/`CI` set) = MiniMax → DeepSeek. Override
+with `QA_GATE_AI="ollama,minimax"`, disable with `QA_GATE_AI=none`. Each provider gets a timeout (Ollama 240 s for
+the cold model load, others 120 s) and one retry; auth or unreachable providers are skipped at once. When the whole
+chain fails the command exits **4** and prints `AI-UNAVAILABLE <task>: … Fallback: the agent that requested this
+step performs it by hand` — nothing hangs, nothing is decided silently. **Germany/EU policy**: a task flagged
+`pii=yes` (repo content, customer data, logs) may only use providers with `dataLeavesMachine: false`; structure-only
+digests (file names, manifests, routes) may go online. `mock` exists for the self-tests.
+
+Consumers today:
+- `qa-gate.sh suggest` — proposes `qa-gate.config.json` (profile, web paths, start command, legal features, checkout
+  path, chat selector) from a structure-only digest and writes `qa-gate.config.suggested.json`; never overwrites.
+- `/legal-review` — drafts legal rule changes as a PR (runs inside Claude Code).
+- opencode agent `qa-gate` — triage of red gates.
+
 ## Templates for the German layer
 
 `templates/barrierefreiheit.md` (the § 19 BFSGV page copy, DE), `templates/BITV-SELBSTBEWERTUNG.md` (manual

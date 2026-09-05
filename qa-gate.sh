@@ -10,7 +10,7 @@ readonly QA_GATE_HOME
 readonly LIB_DIR="$QA_GATE_HOME/lib"
 readonly TPL_DIR="$QA_GATE_HOME/templates"
 
-for lib in common detect secrets audit config-guard semgrep trivy stack-node stack-go stack-python ai-register summary init; do
+for lib in common detect secrets audit config-guard semgrep trivy stack-node stack-go stack-python ai-register summary init suggest; do
   # shellcheck disable=SC1090
   source "$LIB_DIR/$lib.sh"
 done
@@ -20,6 +20,8 @@ for lib in common pa11y lighthouse e2e nuclei axe compliance evidence; do
 done
 # shellcheck disable=SC1091
 source "$LIB_DIR/stages.sh"
+# shellcheck disable=SC1091
+source "$LIB_DIR/ai/ai.sh"
 
 print_usage() {
   cat <<'USAGE'
@@ -28,6 +30,7 @@ qa-gate.sh — global quality gate
 Usage:
   qa-gate.sh <stage> [options]
   qa-gate.sh init [--web] [--repo <path>]
+  qa-gate.sh suggest [--repo <path>]     AI proposes qa-gate.config.json (structure-only digest; never overwrites)
 
 Stages:
   pre-commit | pr | build | staging | compliance | deploy | all
@@ -58,7 +61,7 @@ JSON_ONLY=0
 parse_args() {
   while (( $# > 0 )); do
     case "$1" in
-      init|pre-commit|pr|build|staging|compliance|deploy|all) STAGE="$1"; shift ;;
+      init|suggest|pre-commit|pr|build|staging|compliance|deploy|all) STAGE="$1"; shift ;;
       --repo)                REPO_ARG="${2:?--repo needs a path}"; shift 2 ;;
       --only)                ONLY_FILTER="${2:?--only needs ids}"; shift 2 ;;
       --allow-config-change) ALLOW_CONFIG_CHANGE=1; shift ;;
@@ -101,6 +104,11 @@ main() {
   detect_stack "$(cfg_get ".stack")"
   resolve_profile
   git_base_ref "$(cfg_get ".git.base")"
+
+  if [[ "$STAGE" == "suggest" ]]; then
+    STAGE="suggest"; setup_report_paths
+    suggest_run; exit $?
+  fi
 
   if [[ "$STAGE" == "all" ]]; then
     if stage_all; then exit "$EXIT_PASS"; fi

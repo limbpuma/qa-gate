@@ -264,6 +264,33 @@ test_env_without_profile_and_no_dockerfile() {
   pass "$label"
 }
 
+test_suggest_with_mock_ai() {
+  local label="T12.suggest-mock" dest out
+  dest=$(prep_fixture_repo web)
+  out=$(cd "$dest" && QA_GATE_AI=mock QA_GATE_AI_MOCK_REPLY='{"profile":"mvp-client","web":{"baseUrl":"http://127.0.0.1:4173","paths":["/","/kasse"]},"legal":{"features":["shop","food"]},"secret":"drop-me","rationale":["kasse route → shop"]}' bash "$QA_GATE_SH" suggest 2>/dev/null) || { fail "$label" "suggest exit $? · $(head -3 <<< "$out")"; return; }
+  grep -q 'provider mock' <<< "$out" || { fail "$label" "provider not reported · $(head -1 <<< "$out")"; return; }
+  [[ -f "$dest/qa-gate.config.suggested.json" ]] || { fail "$label" "suggested file missing"; return; }
+  node -e '
+    const j = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+    process.exit(j.profile === "mvp-client" && j.legal.features.includes("shop") && j.secret === undefined ? 0 : 1);
+  ' "$dest/qa-gate.config.suggested.json" || { fail "$label" "proposal content wrong or unknown key kept"; return; }
+  [[ "$(node -e 'process.stdout.write(String(JSON.parse(require("fs").readFileSync(process.argv[1],"utf8")).profile))' "$dest/qa-gate.config.json")" == "mvp-client" ]] || { fail "$label" "config was overwritten"; return; }
+  pass "$label"
+}
+
+test_suggest_without_ai_falls_back() {
+  local label="T13.suggest-no-ai" dest out rc=0
+  dest=$(prep_fixture_repo node)
+  out=$(cd "$dest" && QA_GATE_AI=none bash "$QA_GATE_SH" suggest 2>/dev/null) || rc=$?
+  (( rc == 4 )) || { fail "$label" "expected exit 4, got $rc"; return; }
+  grep -q '^AI-UNAVAILABLE suggest' <<< "$out" || { fail "$label" "no AI-UNAVAILABLE line · $(head -2 <<< "$out")"; return; }
+  grep -q 'performs it by hand' <<< "$out" || { fail "$label" "no hand-off instruction"; return; }
+  # Unreachable chain (mock without a reply) must also fall through, not hang.
+  out=$(cd "$dest" && QA_GATE_AI=mock bash "$QA_GATE_SH" suggest 2>/dev/null) || rc=$?
+  (( rc == 4 )) || { fail "$label" "unavailable provider: expected exit 4, got $rc"; return; }
+  pass "$label"
+}
+
 # --- Runner ----------------------------------------------------------------
 ensure_node_fixture_deps
 for fixture in node go python; do test_pre_commit_passes "$fixture"; done
@@ -277,6 +304,8 @@ test_web_stages_pass
 test_web_compliance_blocks_bad_site
 test_ai_register
 test_env_without_profile_and_no_dockerfile
+test_suggest_with_mock_ai
+test_suggest_without_ai_falls_back
 
 printf '\n%s passed, %s failed\n' "$PASSED" "$FAILED"
 (( FAILED == 0 ))

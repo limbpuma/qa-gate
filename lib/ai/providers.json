@@ -1,0 +1,56 @@
+{
+  "timeoutSec": 120,
+  "retries": 1,
+  "contexts": {
+    "local": [
+      "ollama",
+      "minimax",
+      "deepseek"
+    ],
+    "ci": [
+      "minimax",
+      "deepseek"
+    ]
+  },
+  "providers": {
+    "ollama": {
+      "type": "ollama",
+      "baseUrl": "http://localhost:11434",
+      "model": "qwen3.6:35b-safe",
+      "dataLeavesMachine": false,
+      "euResident": true,
+      "note": "local, $0, PII-safe; cold model load can take ~3 min, hence the longer timeout",
+      "timeoutSec": 240
+    },
+    "minimax": {
+      "type": "anthropic",
+      "baseUrl": "https://api.minimax.io/anthropic/v1",
+      "model": "MiniMax-M3",
+      "keyEnv": "MINIMAX_API_KEY",
+      "dataLeavesMachine": true,
+      "euResident": false,
+      "note": "MiniMax coding plan (flat), default online provider"
+    },
+    "deepseek": {
+      "type": "openai",
+      "baseUrl": "https://api.deepseek.com/v1",
+      "model": "deepseek-chat",
+      "keyEnv": "DEEPSEEK_API_KEY",
+      "dataLeavesMachine": true,
+      "euResident": false,
+      "note": "pay per use fallback"
+    },
+    "mock": {
+      "type": "mock",
+      "dataLeavesMachine": false,
+      "euResident": true,
+      "note": "self-tests only: returns QA_GATE_AI_MOCK_REPLY or a file"
+    }
+  },
+  "policy": {
+    "note": "Germany/EU: a task flagged pii=true (repo content, customer data, logs) may only use providers with dataLeavesMachine=false or euResident=true. Structure-only digests (file names, manifests, routes) may go to any provider.",
+    "piiRequires": {
+      "dataLeavesMachine": false
+    }
+  }
+}
