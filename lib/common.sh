@@ -50,6 +50,15 @@ docker_host_path() {
   printf '%s' "${p//\\//}"
 }
 
+# Why not "-d .git": in a git worktree .git is a file; only git itself knows.
+repo_is_git() { git -C "$REPO_PATH" rev-parse --is-inside-work-tree >/dev/null 2>&1; }
+# Hooks live in the main repository even for a worktree.
+repo_hooks_dir() {
+  local d
+  d=$(git -C "$REPO_PATH" rev-parse --git-path hooks 2>/dev/null)
+  case "$d" in /*|[A-Za-z]:*) printf '%s' "$d" ;; *) printf '%s/%s' "$REPO_PATH" "$d" ;; esac
+}
+
 git_toplevel() {
   local dir="${1:-$PWD}"
   (cd "$dir" && git rev-parse --show-toplevel 2>/dev/null) || true

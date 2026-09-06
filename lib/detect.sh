@@ -97,7 +97,7 @@ profile_cfg() {
 git_base_ref() {
   local cfg_base="$1"
   BASE_REF=""
-  [[ -d "$REPO_PATH/.git" ]] || return 0
+  repo_is_git || return 0
   if [[ -n "$cfg_base" && "$cfg_base" != "auto" ]]; then BASE_REF="$cfg_base"; return 0; fi
   local candidate
   for candidate in main master; do

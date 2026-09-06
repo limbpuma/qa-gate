@@ -101,7 +101,7 @@ secrets_write_report() {
 }
 
 secrets_check() {
-  [[ -d "$REPO_PATH/.git" ]] || { mark_skip "not a git repo"; return 0; }
+  repo_is_git || { mark_skip "not a git repo"; return 0; }
   local files
   mapfile -t files < <(secrets_files | secrets_filter_excludes | while IFS= read -r f; do [[ -f "$REPO_PATH/$f" ]] && printf '%s\n' "$f"; done)
   (( ${#files[@]} == 0 )) && { mark_pass "no files to scan"; return 0; }

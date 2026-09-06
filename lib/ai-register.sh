@@ -27,7 +27,7 @@ ai_sdk_evidence() {
 
 # Tracked source files that talk to a model API directly (no SDK in the manifest).
 ai_source_evidence() {
-  [[ -d "$REPO_PATH/.git" ]] || return 0
+  repo_is_git || return 0
   # shellcheck disable=SC2086
   (cd "$REPO_PATH" && git ls-files -- $AI_SOURCE_GLOBS 2>/dev/null | grep -vE '(^|/)(tests?|__tests__|node_modules|qa-report)/'     | xargs -r grep -lE "$AI_SOURCE_REGEX" 2>/dev/null | head -3 | sed 's/^/source: /')
 }

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "gateVersion": "0.8.0",
+  "gateVersion": "0.8.1",
   "profile": "portfolio-demo",
   "stack": "node",
   "git": {

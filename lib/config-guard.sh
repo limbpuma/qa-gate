@@ -25,7 +25,7 @@ gate_config_blob_at_ref() {
 }
 
 gate_config_check() {
-  [[ -d "$REPO_PATH/.git" ]] || { mark_skip "not a git repo"; return 0; }
+  repo_is_git || { mark_skip "not a git repo"; return 0; }
   [[ -n "$BASE_REF" ]] || { mark_skip "no base ref"; return 0; }
   (cd "$REPO_PATH" && git rev-parse --verify --quiet "$BASE_REF" >/dev/null 2>&1) || { mark_skip "base ref $BASE_REF not found"; return 0; }
 

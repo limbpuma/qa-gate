@@ -69,9 +69,9 @@ init_ignore_files() {
 
 # Step 4: .git/hooks/pre-commit.
 init_hook() {
-  local tpl="$1"
-  local dest="$REPO_PATH/.git/hooks/pre-commit"
-  if [[ ! -d "$REPO_PATH/.git" ]]; then write_marker "skip    $dest (not a git repo)"; return 0; fi
+  local tpl="$1" dest
+  if ! repo_is_git; then write_marker "skip    pre-commit hook (not a git repo)"; return 0; fi
+  dest="$(repo_hooks_dir)/pre-commit"
   ensure_dir "$(dirname "$dest")"
   if [[ -f "$dest" ]]; then
     if grep -qE 'qa-gate\.sh"? pre-commit' "$dest" 2>/dev/null; then
@@ -143,7 +143,7 @@ history_gitignore_unshadow() {
   local dest="$REPO_PATH/.gitignore" dir rel verbose pattern source_file
   dir=$(cfg_get ".report.dir"); dir="${dir:-qa-report}"
   rel="$dir/history.jsonl"
-  [[ -d "$REPO_PATH/.git" ]] || return 0
+  repo_is_git || return 0
   (cd "$REPO_PATH" && git check-ignore -q "$rel" 2>/dev/null) || return 0
   verbose=$(cd "$REPO_PATH" && git check-ignore -v "$rel" 2>/dev/null | head -1)
   source_file="${verbose%%:*}"
