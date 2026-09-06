@@ -198,6 +198,7 @@ run_stage_inner() {
   STAGE_STARTED_AT=$(now_iso)
   local started
   started=$(date +%s)
+  progress_reset
   # Why first: a verdict from a gate older than the repo pinned is not the verdict the repo asked for.
   run_single_check gate-version true gate_version_check
   case "$STAGE" in
@@ -212,6 +213,7 @@ run_stage_inner() {
   write_verdict
   sarif_write
   history_append
+  progress_update finish "" "$(stage_verdict)"
 }
 
 # all = pre-commit → pr → build → staging → compliance, stops at the first FAIL.

@@ -73,6 +73,12 @@ cfg_set() {
 
 installed_gate_version() { tr -d '[:space:]' < "$QA_GATE_HOME/VERSION"; }
 
+# stop_pid <windows or posix pid>: bash's kill cannot reach a native node process on MSYS; taskkill can.
+stop_pid() {
+  [[ -n "$1" ]] || return 0
+  if [[ "$(uname -o 2>/dev/null)" == "Msys" ]]; then taskkill //PID "$1" //T //F >/dev/null 2>&1 || true; else kill "$1" 2>/dev/null || true; fi
+}
+
 # sarif_has <file> <ruleId>: the file is SARIF 2.1.0 with a located result for that rule; exit 1 with a reason otherwise.
 sarif_has() {
   node -e '
@@ -518,6 +524,40 @@ test_deploy_stage() {
   pass "$label"
 }
 
+test_ui_server() {
+  local label="T26.ui" dest out port url pid
+  dest=$(prep_fixture_repo node)
+  run_gate "$dest" init >/dev/null
+  run_gate "$dest" pre-commit --only secrets >/dev/null
+  [[ -f "$dest/qa-report/_logs/current.json" ]] || { fail "$label" "current.json not written by the run"; return; }
+  grep -q '"finished":true' "$dest/qa-report/_logs/current.json" || { fail "$label" "current.json not finished"; return; }
+  # Start the server on a random free port (port 0 → the OS picks), read the URL it prints.
+  (cd "$dest" && node "$QA_GATE_HOME/lib/ui/server.mjs" --repo "$dest" --home "$QA_GATE_HOME" --port 0 > "$dest/ui.out" 2>&1 < /dev/null &)
+  for _ in $(seq 1 30); do sleep 0.3; url=$(grep -m1 '^URL ' "$dest/ui.out" 2>/dev/null | cut -d' ' -f2); [[ -n "$url" ]] && break; done
+  [[ -n "$url" ]] || { fail "$label" "server printed no URL · $(cat "$dest/ui.out")"; return; }
+  pid=$(node -e 'process.stdout.write(String(JSON.parse(require("fs").readFileSync(process.argv[1],"utf8")).pid))' "$dest/qa-report/_logs/ui.json")
+  curl -s "$url/api/health" | grep -q '"tool": "qa-gate"' || { fail "$label" "health endpoint"; stop_pid "$pid"; return; }
+  local id run
+  id=$(curl -s "$url/api/repos" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>process.stdout.write(JSON.parse(s)[0].id))')
+  run=$(curl -s "$url/api/repo/$id/runs" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>process.stdout.write(JSON.parse(s)[0].file))')
+  [[ "$run" == gate-pre-commit-* ]] || { fail "$label" "runs api: $run"; stop_pid "$pid"; return; }
+  curl -s "$url/repo/$id/run/$run" | grep -q '<strong>secrets</strong>' || { fail "$label" "run page lacks the secrets check"; stop_pid "$pid"; return; }
+  curl -s "$url/repo/$id/run/$run?view=agent" | grep -q 'QA-GATE pre-commit' || { fail "$label" "agent view lacks the block"; stop_pid "$pid"; return; }
+  # One SSE state event arrives without a run in progress (the finished state).
+  # Why capture first: curl ends by --max-time (exit 28); under pipefail a pipe into grep would report that as a failure.
+  out=$(curl -s -N --max-time 3 "$url/api/repo/$id/live" || true)
+  grep -q '^event: state' <<< "$out" || { fail "$label" "no SSE state event"; stop_pid "$pid"; return; }
+  # Export writes a self-contained HTML next to the reports.
+  curl -s -X POST -d "repo=$id&run=$run&view=developer" "$url/export" | grep -q 'Report saved' || { fail "$label" "export failed"; stop_pid "$pid"; return; }
+  ls "$dest"/qa-report/report-developer-pre-commit-*.html >/dev/null 2>&1 || { fail "$label" "export file missing"; stop_pid "$pid"; return; }
+  # A second server on the same port must reuse the first, not kill it or fail.
+  port="${url##*:}"
+  out=$(cd "$dest" && node "$QA_GATE_HOME/lib/ui/server.mjs" --repo "$dest" --home "$QA_GATE_HOME" --port "$port" 2>&1)
+  grep -q 'already running' <<< "$out" || { fail "$label" "second instance did not reuse the first · $out"; stop_pid "$pid"; return; }
+  stop_pid "$pid"
+  pass "$label"
+}
+
 # --- Runner ----------------------------------------------------------------
 ensure_node_fixture_deps
 for fixture in node go python; do test_pre_commit_passes "$fixture"; done
@@ -541,6 +581,7 @@ test_history_trend
 test_spec_check
 test_shadow_pass
 test_deploy_stage
+test_ui_server
 if node "$SCRIPT_DIR/../scripts/validate-packs.mjs" >/dev/null 2>&1; then pass "T15.packs-valid"; else fail "T15.packs-valid" "$(node "$SCRIPT_DIR/../scripts/validate-packs.mjs" 2>&1 | grep -A3 FAIL | head -6)"; fi
 # Every legal rule has a fixture pair, and each pair proves the rule (pass.html → PASS, fail.html → FAIL/WARN).
 if out=$(node "$SCRIPT_DIR/../scripts/validate-rules.mjs" 2>&1); then pass "T21.rules-have-fixtures"; else fail "T21.rules-have-fixtures" "$(head -4 <<< "$out")"; fi

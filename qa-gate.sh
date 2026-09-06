@@ -10,7 +10,7 @@ readonly QA_GATE_HOME
 readonly LIB_DIR="$QA_GATE_HOME/lib"
 readonly TPL_DIR="$QA_GATE_HOME/templates"
 
-for lib in common detect secrets audit config-guard waivers version semgrep trivy stack-node stack-go stack-python ai-register spec deploy summary init suggest; do
+for lib in common detect secrets audit config-guard waivers version semgrep trivy stack-node stack-go stack-python ai-register spec deploy summary init suggest ui; do
   # shellcheck disable=SC1090
   source "$LIB_DIR/$lib.sh"
 done
@@ -32,6 +32,10 @@ Usage:
   qa-gate.sh init [--web] [--repo <path>]
   qa-gate.sh update [--repo <path>]      pin the installed gate version in qa-gate.config.json (gateVersion)
   qa-gate.sh trend [n] [--repo <path>]   last n runs from qa-report/history.jsonl (verdict, coverage, Lighthouse, fails)
+  qa-gate.sh ui [--port 4600] [--all] [--open] [--strict-port]
+                                         local page over qa-report/: runs, checks, findings, legal table, live view,
+                                         export as self-contained HTML; --all adds the repos of live-sites.json;
+                                         a busy port is never killed: an existing ui is reused, else a free port
   qa-gate.sh suggest [--repo <path>]     AI proposes qa-gate.config.json (structure-only digest; never overwrites)
 
 Stages:
@@ -69,7 +73,11 @@ JSON_ONLY=0
 parse_args() {
   while (( $# > 0 )); do
     case "$1" in
-      init|update|suggest|pre-commit|pr|build|staging|compliance|deploy|all) STAGE="$1"; shift ;;
+      init|update|suggest|ui|pre-commit|pr|build|staging|compliance|deploy|all) STAGE="$1"; shift ;;
+      --port)                UI_PORT="${2:?--port needs a number}"; shift 2 ;;
+      --strict-port)         UI_STRICT=1; shift ;;
+      --all)                 UI_ALL=1; shift ;;
+      --open)                UI_OPEN=1; shift ;;
       trend)                 STAGE="trend"; shift; if [[ "${1:-}" =~ ^[0-9]+$ ]]; then TREND_ROWS="$1"; shift; fi ;;
       --repo)                REPO_ARG="${2:?--repo needs a path}"; shift 2 ;;
       --profile)             PROFILE_OVERRIDE="${2:?--profile needs a name}"; shift 2 ;;
@@ -108,6 +116,11 @@ main() {
   if [[ "$STAGE" == "init" ]]; then
     init_all "$INIT_WEB"
     exit "$EXIT_PASS"
+  fi
+  if [[ "$STAGE" == "ui" ]]; then
+    ensure_dir "$REPO_PATH/qa-report/_logs"
+    ui_run
+    exit $?
   fi
 
   load_config

@@ -11,6 +11,8 @@ qa-gate.sh <stage> [options]      stage: pre-commit | pr | build | staging | com
 qa-gate.sh init [--web]           bootstrap a repo (config with gateVersion, shim, hook, ignore files, DoD block)
 qa-gate.sh update                 pin the installed gate version in qa-gate.config.json (gateVersion); syncs the history .gitignore rule
 qa-gate.sh trend [n]              last n runs from qa-report/history.jsonl
+qa-gate.sh ui [--port 4600] [--all] [--open] [--strict-port]
+                                  local page over qa-report/ (see "The ui page" below)
 qa-gate.sh suggest                AI proposes qa-gate.config.json (never overwrites)
 
 --repo <path>            target repo (default: git toplevel of cwd)
@@ -187,6 +189,21 @@ Providers are chosen dynamically: on a developer machine Ollama (local, free, da
 the MiniMax plan, then DeepSeek; in CI MiniMax then DeepSeek. Each has a timeout and one retry. When no provider
 answers, the command exits 4 and says so: the agent that requested the step does it by hand. **EU policy**: a task
 that carries repo content or customer data may only use providers that keep data on the machine.
+
+## The ui page
+
+`qa-gate.sh ui` starts `lib/ui/server.mjs` on 127.0.0.1 and prints `URL http://127.0.0.1:<port>` as its first line.
+Port policy: default 4600; busy → if `/api/health` there answers as a qa-gate ui it is reused (the command prints its
+URL and exits), otherwise the OS picks a free port; `--strict-port` fails instead; nothing is ever killed. The URL and
+PID are written to `qa-report/_logs/ui.json`. `--all` adds every repo of `~/.claude/qa-gate/live-sites.json`.
+
+Pages: `/` repositories with the latest run per stage · `/repo/<id>` runs and the trend from `history.jsonl` ·
+`/repo/<id>/run/<file>` one run (`?view=developer` checks, findings grouped by rule with source links, legal table,
+needs-review list, Lighthouse, dependencies, business facts, log · `?view=client` assumptions, legal table, review
+list, Lighthouse, evidence bundle · `?view=agent` the summary block and the JSON) · `/repo/<id>/live` follows a run
+over SSE from `qa-report/_logs/current.json` (written by `run_check`: stage, running check, checks done, verdict) and
+the newest log. `POST /export` (the only write) saves the current view as `qa-report/report-<view>-<stage>-<ts>.html`,
+self-contained. JSON for everything under `/api/health`, `/api/repos`, `/api/repo/<id>/runs|run/<file>|history|live`.
 
 ## Live sites and legal watch (no tokens)
 

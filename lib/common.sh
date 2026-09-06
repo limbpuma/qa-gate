@@ -112,6 +112,25 @@ elapsed_sec() { echo $(( $(date +%s) - TIMER_START )); }
 now_stamp()   { date +%Y%m%d-%H%M%S; }
 now_iso()     { date +%Y-%m-%dT%H:%M:%S%z; }
 
+# --- Progress file (qa-report/_logs/current.json) for the live view ------------
+# Why a file and not a socket: the gate stays a script; anything that wants to watch it reads the file.
+PROGRESS_FILE=""
+progress_reset() {
+  PROGRESS_FILE="$LOG_DIR/current.json"
+  node -e 'require("fs").writeFileSync(process.argv[1], JSON.stringify({ stage: process.argv[2], startedAt: process.argv[3], pid: process.pid, running: null, done: [], finished: false }) + "\n")' "$PROGRESS_FILE" "$STAGE" "$STAGE_STARTED_AT" 2>/dev/null || true
+}
+progress_update() {
+  [[ -n "$PROGRESS_FILE" ]] || return 0
+  node -e '
+    const fs = require("fs"); const p = process.argv[1]; const [phase, id, status, dur, summary] = process.argv.slice(2);
+    let j = {}; try { j = JSON.parse(fs.readFileSync(p, "utf8")); } catch { j = { done: [] }; }
+    if (phase === "start") j.running = { id, since: new Date().toISOString() };
+    else if (phase === "done") { j.running = null; (j.done ||= []).push({ id, status, dur: Number(dur), summary }); }
+    else if (phase === "finish") { j.running = null; j.finished = true; j.verdict = status; j.finishedAt = new Date().toISOString(); }
+    fs.writeFileSync(p, JSON.stringify(j) + "\n");
+  ' "$PROGRESS_FILE" "$@" 2>/dev/null || true
+}
+
 # --- run_check -------------------------------------------------------------
 # Usage: run_check <id> <blocking-true|false> <fn> [args...]
 # <fn> reports through mark_pass/mark_fail/mark_skip/mark_warn and may set
@@ -121,6 +140,7 @@ run_check() {
   local R_STATUS="" R_SUMMARY="" R_VALUE="" R_RATCHET="" R_MIN="" R_REPORT="" R_COUNT_JSON="" R_WAIVER_JSON=""
 
   log_info "--- check: $id (blocking=$blocking) ---"
+  progress_update start "$id"
   start_timer
   set +e
   "$fn" "$@"
@@ -143,6 +163,7 @@ run_check() {
   fi
 
   CHECK_RESULTS+=("${id}|${R_STATUS}|${blocking}|${dur}|${R_SUMMARY}|${extras}")
+  progress_update done "$id" "$R_STATUS" "$dur" "$R_SUMMARY"
   log_info "--- done: $id → $R_STATUS (${dur}s) — $R_SUMMARY ---"
 }
 
