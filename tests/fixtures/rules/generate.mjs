@@ -197,6 +197,11 @@ const FIXTURES = {
   'sector.forbidden-wording': { options: { legal: { sector: 'steuerberatung' } }, pass: { sector: { on: true } }, fail: { sector: { on: true, testsieger: true } } },
   // The base page has a Kasse with "Zahlungspflichtig bestellen": declaring shop matches, leaving it out does not.
   'legal.features-evidence': { options: { pass: { legal: { features: ['shop'] } }, fail: { legal: { features: [] } } } },
+  // The base page shows shop signals (Kasse with "Zahlungspflichtig bestellen"): a spec with online payments agrees, one without does not.
+  'legal.spec-consistency': { options: {
+    pass: { spec: { found: true, file: 'docs/BUSINESS.md', placeholders: [], expected: { sector: 'gastro', features: ['shop'], ai: false } } },
+    fail: { spec: { found: true, file: 'docs/BUSINESS.md', placeholders: [], expected: { sector: 'gastro', features: [], ai: false } } },
+  } },
   'datenschutz.content': { fail: { datenschutz: { verantwortlicher: false, betroffenenrechte: false, beschwerderecht: false } } },
   'datenschutz.dsb': { options: { fail: { legal: { sector: 'pflege' } } }, fail: { datenschutz: { dsb: false } } },
   'datenschutz.third-country': { pass: { head: GSTATIC_IMG }, fail: { head: GSTATIC_IMG, datenschutz: { thirdCountry: false } } },

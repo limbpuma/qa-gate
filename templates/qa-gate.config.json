@@ -20,7 +20,8 @@
         "evidence",
         "docker-build",
         "trivy-image",
-        "sbom"
+        "sbom",
+        "spec"
       ],
       "sitemapMaxPages": 0
     },
@@ -99,6 +100,30 @@
     ]
   },
   "waivers": [],
+  "spec": {
+    "files": [
+      "docs/BUSINESS.md",
+      "BUSINESS.md",
+      "SPEC.md",
+      "docs/SPEC.md",
+      "README.md",
+      "specs",
+      ".specify",
+      "docs/adr",
+      "docs/specs"
+    ],
+    "codePaths": [
+      "src",
+      "app",
+      "lib",
+      "pages",
+      "cmd",
+      "internal",
+      "components"
+    ],
+    "staleAfterDays": 180,
+    "staleAfterCommits": 20
+  },
   "semgrep": {
     "image": "semgrep/semgrep:1.130.0",
     "rulesets": [

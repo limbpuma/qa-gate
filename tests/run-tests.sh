@@ -455,6 +455,47 @@ test_history_trend() {
   pass "$label"
 }
 
+test_spec_check() {
+  local label="T23.spec" dest out
+  dest=$(prep_fixture_repo node)
+  run_gate "$dest" init | grep -q 'BUSINESS.md' || { fail "$label" "init did not write docs/BUSINESS.md"; return; }
+  # Template with placeholders → WARN telling the human to fill it.
+  out=$(run_gate "$dest" pr --no-docker --only spec) || { fail "$label" "spec must never block (exit $?)"; return; }
+  grep -qE '^WARN[[:space:]]+spec[[:space:]]+docs/BUSINESS.md: placeholders' <<< "$out" || { fail "$label" "placeholder WARN missing · $(grep spec <<< "$out")"; return; }
+  # A filled block that agrees with the config (no features, no sector) → PASS.
+  printf '# Facts\n\n```qa-gate\nsector:\nordering: none\ndelivery: none\npayments: none\nforms: false\nnewsletter: false\nai: none\nconsumers: true\nstand: %s\nstatus: active\n```\n' "$(date +%Y-%m-%d)" > "$dest/docs/BUSINESS.md"
+  (cd "$dest" && git_quiet add -A && git_commit_quiet -m "business facts")
+  out=$(run_gate "$dest" pr --no-docker --only spec) || { fail "$label" "exit $?"; return; }
+  grep -qE '^PASS[[:space:]]+spec' <<< "$out" || { fail "$label" "consistent block not PASS · $(grep spec <<< "$out")"; return; }
+  # Online payments in the spec, no shop in the config → WARN naming the missing feature; an old stand → stale WARN.
+  sed -i 's/^payments: none/payments: online/; s/^stand: .*/stand: 2024-01-01/' "$dest/docs/BUSINESS.md"
+  out=$(run_gate "$dest" pr --no-docker --only spec) || { fail "$label" "exit $?"; return; }
+  # Why the JSON: the summary line is cut at 55 characters; the report carries every problem.
+  grep -qE '^WARN[[:space:]]+spec' <<< "$out" || { fail "$label" "mismatch/stale WARN missing · $(grep spec <<< "$out")"; return; }
+  grep -q 'lacks: shop' "$dest/qa-report/spec.json" && grep -q 'days old' "$dest/qa-report/spec.json" || { fail "$label" "spec.json lacks both problems"; return; }
+  # Deprecated blocks are ignored.
+  sed -i 's/^status: active/status: deprecated/' "$dest/docs/BUSINESS.md"
+  out=$(run_gate "$dest" pr --no-docker --only spec) || { fail "$label" "exit $?"; return; }
+  grep -qE '^SKIP[[:space:]]+spec[[:space:]]+only deprecated' <<< "$out" || { fail "$label" "deprecated not SKIP · $(grep spec <<< "$out")"; return; }
+  pass "$label"
+}
+
+test_shadow_pass() {
+  local label="T24.shadow" dest out
+  dest=$(prep_fixture_repo web)
+  # The pizzeria fixture has a Kasse; with no features declared the shop rules run in shadow: warnings, never FAIL.
+  cfg_set "$dest/qa-gate.config.json" 'j.legal.features = []'
+  out=$(run_gate "$dest" compliance --only legal) || true
+  node -e '
+    const j = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+    const f = (id) => j.checks.find((c) => c.id === id) || {};
+    const costs = f("shop.delivery-costs"), ev = f("legal.features-evidence");
+    const ok = costs.shadow === true && ["WARN", "SKIP"].includes(costs.status) && /shadow \(feature shop/.test(costs.detail) && ev.status === "WARN";
+    if (!ok) { process.stdout.write(JSON.stringify({ costs, ev })); process.exit(1); }
+  ' "$dest/qa-report/compliance-scan.json" || { fail "$label" "shadow results missing"; return; }
+  pass "$label"
+}
+
 # --- Runner ----------------------------------------------------------------
 ensure_node_fixture_deps
 for fixture in node go python; do test_pre_commit_passes "$fixture"; done
@@ -475,6 +516,8 @@ test_waivers
 test_gate_version_pin
 test_sitemap_paths
 test_history_trend
+test_spec_check
+test_shadow_pass
 if node "$SCRIPT_DIR/../scripts/validate-packs.mjs" >/dev/null 2>&1; then pass "T15.packs-valid"; else fail "T15.packs-valid" "$(node "$SCRIPT_DIR/../scripts/validate-packs.mjs" 2>&1 | grep -A3 FAIL | head -6)"; fi
 # Every legal rule has a fixture pair, and each pair proves the rule (pass.html → PASS, fail.html → FAIL/WARN).
 if out=$(node "$SCRIPT_DIR/../scripts/validate-rules.mjs" 2>&1); then pass "T21.rules-have-fixtures"; else fail "T21.rules-have-fixtures" "$(head -4 <<< "$out")"; fi

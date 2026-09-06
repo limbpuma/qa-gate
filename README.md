@@ -108,6 +108,10 @@ the four AI Act checks.
 - Any agent that commits goes through the hook. The Definition of Done in `AGENTS.md` says: run `pr`, paste
   the summary, never touch the gate's config. A lowered threshold on a branch fails `gate-config`.
 - An accepted risk is a **waiver** with a date and a name, never a lowered bar. The finding stays in every report.
+- **The business facts live in the repo**, not in someone's head: `init` writes `docs/BUSINESS.md` with a small
+  `qa-gate` block (sector, ordering, payments, forms, newsletter, AI, consumers, date). The gate compares it with
+  the config and with the site and warns on any disagreement or when the spec goes stale; it never lowers a rule
+  because of it. Features the site shows but nobody declared run in shadow, so the cost of the drift is visible.
 - Each repo pins the gate version it expects (`gateVersion`); an older installed gate is FAIL on client profiles.
 - AI is used only to propose: a config suggestion, a rule draft, a triage. Verdicts are never generated.
 

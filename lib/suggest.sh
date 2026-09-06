@@ -37,6 +37,8 @@ suggest_digest() {
   (cd "$root" && git ls-files 2>/dev/null | grep -iE 'impressum|datenschutz|privacy|agb|widerruf|barrierefrei|checkout|kasse|cart|warenkorb|order|bestell|booking|termin|menu|speise|newsletter|contact|kontakt|chat|assistant' | head -60) || true
   echo "## AI SDK evidence"
   ai_sdk_evidence | head -5
+  echo "## business facts (qa-gate block in the spec, if any)"
+  node "$LIB_DIR/spec.js" "$root" "$CONFIG_JSON" 2>/dev/null | node -e 'let s="";process.stdin.on("data",(d)=>s+=d).on("end",()=>{const j=JSON.parse(s||"{}");console.log(j.found?`file: ${j.file}\n${Object.entries(j.facts).map(([k,v])=>k+": "+v).join("\n")}`:"none found")})'
   set -e
   return 0
 }
@@ -58,17 +60,25 @@ suggest_run() {
       const raw = process.argv[1];
       const start = raw.indexOf("{"), end = raw.lastIndexOf("}");
       const j = JSON.parse(raw.slice(start, end + 1));
-      const allowed = ["profile", "web", "legal", "commands", "rationale"];
+      const allowed = ["profile", "web", "legal", "commands", "rationale", "business"];
       for (const k of Object.keys(j)) if (!allowed.includes(k)) delete j[k];
       if (j.profile === "production") j.profile = "mvp-client";
+      // A proposed business block goes to its own file for a human to confirm; it never enters the config.
+      if (j.business && typeof j.business === "object") {
+        const lines = Object.entries(j.business).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : v}`).join("\n");
+        require("fs").mkdirSync(require("path").dirname(process.argv[3]), { recursive: true });
+        require("fs").writeFileSync(process.argv[3], "# Business facts (proposed by qa-gate suggest — confirm every line, then rename to BUSINESS.md)\n\n```qa-gate\n" + lines + "\nstatus: active\n```\n");
+        delete j.business;
+      }
       require("fs").writeFileSync(process.argv[2], JSON.stringify(j, null, 2) + "\n");
-    ' "$reply" "$out" 2>>"$LOG_FILE"; then
+    ' "$reply" "$out" "$REPO_PATH/docs/BUSINESS.suggested.md" 2>>"$LOG_FILE"; then
     printf 'suggest: the model did not return valid JSON (provider %s) — see %s\n' "$(ai_last_provider)" "$LOG_FILE"
     rm -f "$digest" "$user"; return "$EXIT_FAIL"
   fi
   rm -f "$digest" "$user"
   printf 'QA-GATE suggest · %s · provider %s\n' "$(basename "$REPO_PATH")" "$(ai_last_provider)"
   printf 'wrote  %s (proposal — review, then merge into qa-gate.config.json and commit)\n' "$SUGGEST_FILE"
+  [[ -f "$REPO_PATH/docs/BUSINESS.suggested.md" ]] && printf 'wrote  docs/BUSINESS.suggested.md (business facts drafted from the digest — confirm, then rename to BUSINESS.md)\n'
   node -e '
     const j = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
     const line = (k, v) => v !== undefined && console.log(`  ${k.padEnd(18)} ${typeof v === "object" ? JSON.stringify(v) : v}`);

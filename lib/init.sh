@@ -181,6 +181,16 @@ init_ai_register() {
   write_marker "wrote   $dest (fill the [TODO] fields)"
 }
 
+# Step 8b: the business facts block, unless the repo already carries one somewhere.
+init_business() {
+  local tpl="$1" dest="$REPO_PATH/docs/BUSINESS.md"
+  if node "$LIB_DIR/spec.js" "$REPO_PATH" "$CONFIG_JSON" 2>/dev/null | grep -q '"found":true'; then write_marker "exists  business block found (spec.js)"; return 0; fi
+  if [[ -f "$dest" ]]; then write_marker "exists  $dest"; return 0; fi
+  ensure_dir "$(dirname "$dest")"
+  cp "$tpl" "$dest"
+  write_marker "wrote   $dest (fill the [TODO] facts: they decide which German duties apply)"
+}
+
 # Step 9: Claude Code agents read CLAUDE.md, not AGENTS.md — same DoD block there when the file exists.
 init_claude_md_dod() {
   local tpl="$1" dest="$REPO_PATH/CLAUDE.md"
@@ -209,5 +219,6 @@ init_all() {
   load_config
   resolve_profile
   history_gitignore_sync "$(history_commit_wanted)"
+  init_business      "$tpl_dir/BUSINESS.md"
   return 0
 }

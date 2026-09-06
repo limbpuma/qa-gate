@@ -482,6 +482,34 @@
           "type": "boolean"
         }
       }
+    },
+    "spec": {
+      "type": "object",
+      "description": "Where the business facts block (```qa-gate fence) is looked for and when it counts as stale.",
+      "properties": {
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Files or directories (walked 3 levels) searched for the block; deprecated blocks are ignored, the most recently touched wins."
+        },
+        "codePaths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Paths whose commits count as code changes since the spec was last touched."
+        },
+        "staleAfterDays": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "staleAfterCommits": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
     }
   },
   "definitions": {

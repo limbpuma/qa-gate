@@ -68,7 +68,9 @@ async function runVariant(id, variant, options, workDir) {
   const { server, base } = await serve(html, variantOptions.headers !== false, variantOptions.notFound || []);
   const out = join(workDir, `${id}-${variant}.json`);
   try {
-    const { stderr } = await runScan(['--out', out, '--base', base, '--legal', JSON.stringify(legal), '--paths', JSON.stringify(options.paths || ['/']), '--profile', 'production', '--rule', id]);
+    const args = ['--out', out, '--base', base, '--legal', JSON.stringify(legal), '--paths', JSON.stringify(options.paths || ['/']), '--profile', 'production', '--rule', id];
+    if (variantOptions.spec) args.push('--spec', JSON.stringify(variantOptions.spec));
+    const { stderr } = await runScan(args);
     if (!existsSync(out)) return { status: 'ERROR', detail: stderr.split('\n').filter(Boolean).slice(-2).join(' | ') };
     const result = JSON.parse(readFileSync(out, 'utf8')).checks.find((c) => c.id === id);
     return result || { status: 'ERROR', detail: 'rule not in report' };

@@ -1,0 +1,28 @@
+{
+  "pass": {
+    "spec": {
+      "found": true,
+      "file": "docs/BUSINESS.md",
+      "placeholders": [],
+      "expected": {
+        "sector": "gastro",
+        "features": [
+          "shop"
+        ],
+        "ai": false
+      }
+    }
+  },
+  "fail": {
+    "spec": {
+      "found": true,
+      "file": "docs/BUSINESS.md",
+      "placeholders": [],
+      "expected": {
+        "sector": "gastro",
+        "features": [],
+        "ai": false
+      }
+    }
+  }
+}

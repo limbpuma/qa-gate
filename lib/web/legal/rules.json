@@ -566,6 +566,19 @@
       ],
       "requires": [],
       "source": "https://www.gesetze-im-internet.de/ddg/__5.html"
+    },
+    {
+      "id": "legal.spec-consistency",
+      "check": "specConsistency",
+      "law": "configuration sanity (the declared business facts vs the audited pages)",
+      "since": "2026-09-06",
+      "profiles": [
+        "portfolio-demo",
+        "mvp-client",
+        "production"
+      ],
+      "requires": [],
+      "source": "https://github.com/limbpuma/qa-gate/blob/main/docs/REFERENCE.md"
     }
   ]
 }

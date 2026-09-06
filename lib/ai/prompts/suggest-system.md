@@ -14,6 +14,7 @@ Reply with ONE JSON object and nothing else. Allowed keys (omit what you cannot 
     "ai": { "chatSelector": "<css selector of the chat widget or empty>", "providers": ["<AI vendors the backend calls>"] }
   },
   "commands": { "node": { "e2e": "<script name or auto>" } },
+  "business": { "sector": "...", "ordering": "none|phone|online", "delivery": "none|pickup|delivery|both", "payments": "none|on-site|online", "forms": true|false, "newsletter": true|false, "ai": "none|chatbot|generated-content|both", "consumers": true|false, "stand": "YYYY-MM-DD" },
   "rationale": ["one short line per decision, citing the digest evidence"]
 }
 
@@ -27,3 +28,6 @@ Rules:
   "forms" when forms collect an e-mail; "newsletter" when a newsletter form exists.
 - paths: the start page plus every public route that matters legally (menu, checkout, booking, contact). Max 8.
 - Prefer routes and ports that appear in the digest; when unsure, leave the key out instead of guessing.
+- When the digest contains a "business facts" block, derive sector and features FROM IT and cite it; do not return
+  "business" then. When it says "none found", propose a "business" object from the digest (a human confirms it) and
+  keep features minimal: a landing page without ordering or payments declares none.

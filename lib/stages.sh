@@ -109,6 +109,7 @@ stage_pr() {
   run_single_check semgrep true semgrep_check
   run_single_check trivy-fs true trivy_fs_check
   run_single_check ai-register true ai_register_check
+  run_single_check spec false spec_check
   run_single_check gate-config true gate_config_check
 }
 

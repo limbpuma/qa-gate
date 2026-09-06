@@ -13,6 +13,7 @@ compliance_scan_check() {
     --legal "$(cfg_get ".legal")" \
     --paths "$(web_paths_json)" \
     --waivers "$WAIVERS_ACTIVE_JSON" \
+    --spec "$(spec_json)" \
     --profile "$PROFILE" >>"$LOG_FILE" 2>&1 || true
   [[ -f "$REPO_PATH/$COMPLIANCE_REPORT" ]] || { mark_fail "compliance scan produced no report — see log"; return 0; }
   local failed warned passed first_fail

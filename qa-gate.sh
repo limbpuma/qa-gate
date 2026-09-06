@@ -10,7 +10,7 @@ readonly QA_GATE_HOME
 readonly LIB_DIR="$QA_GATE_HOME/lib"
 readonly TPL_DIR="$QA_GATE_HOME/templates"
 
-for lib in common detect secrets audit config-guard waivers version semgrep trivy stack-node stack-go stack-python ai-register summary init suggest; do
+for lib in common detect secrets audit config-guard waivers version semgrep trivy stack-node stack-go stack-python ai-register spec summary init suggest; do
   # shellcheck disable=SC1090
   source "$LIB_DIR/$lib.sh"
 done
