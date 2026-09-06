@@ -395,7 +395,8 @@
               "forms",
               "newsletter"
             ]
-          }
+          },
+          "description": "Business facts, decided by a human: shop = goods ordered and paid online (PAngV, Widerruf, Muster-Widerrufsformular); food = food ordered at a distance (LMIV Art. 14 allergens block); forms = forms collecting an e-mail; newsletter = newsletter sign-up. A menu-only landing page without ordering declares none of them."
         },
         "allowedHosts": {
           "type": "array",

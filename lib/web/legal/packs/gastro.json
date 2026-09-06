@@ -11,13 +11,49 @@
   ],
   "impressumPatterns": [],
   "statements": [
-    { "id": "allergene", "regex": "Allergen|Allergene|Zusatzstoffe", "pages": ["any"], "law": "LMIV Art. 14, LMIDV § 2", "severity": "FAIL", "note": "Allergen and additive information must be reachable before the order for loose food sold online" },
-    { "id": "preise-brutto", "regex": "inkl\\.? ?MwSt|inklusive Mehrwertsteuer|Endpreis", "pages": ["any"], "law": "PAngV § 3", "severity": "FAIL", "note": "Consumer prices are total prices including VAT" }
+    {
+      "id": "allergene",
+      "regex": "Allergen|Allergene|Zusatzstoffe",
+      "pages": [
+        "any"
+      ],
+      "law": "LMIV Art. 14, LMIDV § 2",
+      "severity": "WARN",
+      "note": "Duty for loose food sold at a distance (online/telephone ordering, LMIV Art. 14, LMIDV § 2); on a menu-only landing page without ordering it is a recommendation — enable legal.features \"food\" where ordering exists, then food.allergens blocks."
+    },
+    {
+      "id": "preise-brutto",
+      "regex": "inkl\\.? ?MwSt|inklusive Mehrwertsteuer|Endpreis",
+      "pages": [
+        "any"
+      ],
+      "law": "PAngV § 3",
+      "severity": "FAIL",
+      "note": "Consumer prices are total prices including VAT"
+    }
   ],
   "requiredLinks": [],
   "forbiddenWords": [
-    { "id": "bio-claim-without-control-body", "regex": "\\bBio\\b|\\bÖko\\b|biologisch", "pages": ["any"], "law": "VO (EU) 2018/848 Art. 30 ff. (Öko-Kontrollstelle DE-ÖKO-xxx)", "severity": "WARN", "note": "Using Bio/Öko requires certification and the control body code (DE-ÖKO-…) on the site; the gate cannot verify certification, hence WARN" },
-    { "id": "health-claim", "regex": "stärkt (das )?Immunsystem|heilt|gesundheitsfördernd|senkt (den )?Cholesterin", "pages": ["any"], "law": "Health-Claims-VO (EG) 1924/2006 Art. 10", "severity": "FAIL", "note": "Unauthorised health claims on food are a classic Abmahnung" }
+    {
+      "id": "bio-claim-without-control-body",
+      "regex": "\\bBio\\b|\\bÖko\\b|biologisch",
+      "pages": [
+        "any"
+      ],
+      "law": "VO (EU) 2018/848 Art. 30 ff. (Öko-Kontrollstelle DE-ÖKO-xxx)",
+      "severity": "WARN",
+      "note": "Using Bio/Öko requires certification and the control body code (DE-ÖKO-…) on the site; the gate cannot verify certification, hence WARN"
+    },
+    {
+      "id": "health-claim",
+      "regex": "stärkt (das )?Immunsystem|heilt|gesundheitsfördernd|senkt (den )?Cholesterin",
+      "pages": [
+        "any"
+      ],
+      "law": "Health-Claims-VO (EG) 1924/2006 Art. 10",
+      "severity": "FAIL",
+      "note": "Unauthorised health claims on food are a classic Abmahnung"
+    }
   ],
   "manual": [
     "Gaststättenerlaubnis / Gewerbeanmeldung are not website duties but must exist",
@@ -26,6 +62,8 @@
   ],
   "pruefen": [
     "Kennzeichnung of Zusatzstoffe online: numbering vs. wording accepted by the local Lebensmittelüberwachung",
-    "Pfand for delivery packaging (VerpackG § 33 Mehrwegangebotspflicht since 2023) — wording on the ordering page"
+    "Pfand for delivery packaging (VerpackG § 33 Mehrwegangebotspflicht since 2023) — wording on the ordering page",
+    "Reine Landingpage ohne Bestellmöglichkeit (nur Abholung nach Anruf vor Ort): Allergenkennzeichnung online empfohlen, Pflicht nur am Ort der Abgabe (LMIDV § 2) bzw. im Fernabsatz (LMIV Art. 14) — Abgrenzung mit dem Anwalt.",
+    "Widerrufsbelehrung: bei Speisen, die kurzfristig zubereitet und geliefert/abgeholt werden, besteht kein Widerrufsrecht (§ 312g Abs. 2 Nr. 2 BGB, verderbliche Ware); eine dennoch veröffentlichte Belehrung ist kein Verstoß, aber prüfen, ob sie Verbraucher irreführt."
   ]
 }
