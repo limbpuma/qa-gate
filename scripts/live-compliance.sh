@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# scripts/live-compliance.sh — run the compliance stage against LIVE sites listed in a registry (drift check).
+# scripts/live-compliance.sh — run the deploy stage (smoke + compliance) against LIVE sites listed in a registry (drift check).
 # Usage: live-compliance.sh [registry.json]   default: ~/.claude/qa-gate/live-sites.json
 # Registry: [ { "repo": "/c/Users/me/proj/example-shop", "url": "https://example-shop.de", "paths": ["/", "/preise"] } ]
 # Scheduled every 4 weeks by schtasks (Windows) or cron (Linux); no LLM involved. Evidence lands in each repo's qa-report/.
@@ -24,7 +24,8 @@ for i in $(seq 0 $((count - 1))); do
   paths=$(node -e 'const e=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"))[process.argv[2]]; process.stdout.write(e.paths ? JSON.stringify(e.paths) : "")' "$REGISTRY" "$i")
   [[ -d "$repo" ]] || { echo "SKIP $url — repo not on this machine: $repo" | tee -a "$SUMMARY"; continue; }
   echo "=== $url ($repo)" | tee -a "$SUMMARY"
-  args=(compliance --repo "$repo" --base-url "$url")
+  # Why deploy and not compliance: the deploy stage adds the smoke check and lands in the history as a live run.
+  args=(deploy --repo "$repo" --base-url "$url")
   [[ -n "$paths" ]] && args+=(--paths "$paths")
   if bash "$QA_GATE_HOME/qa-gate.sh" "${args[@]}" 2>>"$LOG_DIR/live-compliance-$STAMP.err" | tee -a "$SUMMARY"; then
     echo "PASS $url" | tee -a "$SUMMARY"

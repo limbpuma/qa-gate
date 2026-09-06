@@ -496,6 +496,28 @@ test_shadow_pass() {
   pass "$label"
 }
 
+test_deploy_stage() {
+  local label="T25.deploy" dest out
+  dest=$(prep_fixture_repo web)
+  # Without a live URL the stage says so and does nothing.
+  out=$(run_gate "$dest" deploy) || { fail "$label" "deploy without URL must not fail (exit $?)"; return; }
+  grep -qE '^SKIP[[:space:]]+deploy[[:space:]]+no live URL' <<< "$out" || { fail "$label" "no-URL SKIP missing · $(head -3 <<< "$out")"; return; }
+  # Against the running fixture site: smoke PASS, then the compliance body in live mode.
+  (cd "$dest" && PORT=4177 node server.mjs >/dev/null 2>&1 &)
+  sleep 2
+  out=$(run_gate "$dest" deploy --base-url http://127.0.0.1:4177) || { fail "$label" "deploy exit $? · $(grep -E 'smoke|legal|axe' <<< "$out")"; return; }
+  grep -qE '^PASS[[:space:]]+smoke[[:space:]]+http://127.0.0.1:4177/ answered 200' <<< "$out" || { fail "$label" "smoke line wrong · $(grep smoke <<< "$out")"; return; }
+  grep -qE '^PASS[[:space:]]+legal' <<< "$out" || { fail "$label" "legal not PASS in deploy · $(grep legal <<< "$out")"; return; }
+  grep -q '"stage":"deploy"' "$dest/qa-report/history.jsonl" || { fail "$label" "deploy run not in history"; return; }
+  # A dead URL fails smoke and skips the rest instead of crashing.
+  out=$(run_gate "$dest" deploy --base-url http://127.0.0.1:4178) && { fail "$label" "dead URL did not FAIL"; return; }
+  grep -qE '^FAIL[[:space:]]+smoke' <<< "$out" || { fail "$label" "dead URL smoke not FAIL · $(grep smoke <<< "$out")"; return; }
+  local pid
+  pid=$(powershell -NoProfile -Command "(Get-NetTCPConnection -LocalPort 4177 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty OwningProcess)" 2>/dev/null | tr -d '\r ')
+  [[ -n "$pid" ]] && taskkill //PID "$pid" //T //F >/dev/null 2>&1
+  pass "$label"
+}
+
 # --- Runner ----------------------------------------------------------------
 ensure_node_fixture_deps
 for fixture in node go python; do test_pre_commit_passes "$fixture"; done
@@ -518,6 +540,7 @@ test_sitemap_paths
 test_history_trend
 test_spec_check
 test_shadow_pass
+test_deploy_stage
 if node "$SCRIPT_DIR/../scripts/validate-packs.mjs" >/dev/null 2>&1; then pass "T15.packs-valid"; else fail "T15.packs-valid" "$(node "$SCRIPT_DIR/../scripts/validate-packs.mjs" 2>&1 | grep -A3 FAIL | head -6)"; fi
 # Every legal rule has a fixture pair, and each pair proves the rule (pass.html → PASS, fail.html → FAIL/WARN).
 if out=$(node "$SCRIPT_DIR/../scripts/validate-rules.mjs" 2>&1); then pass "T21.rules-have-fixtures"; else fail "T21.rules-have-fixtures" "$(head -4 <<< "$out")"; fi

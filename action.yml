@@ -9,7 +9,7 @@ branding:
 
 inputs:
   stage:
-    description: pre-commit | pr | build | staging | compliance | all
+    description: pre-commit | pr | build | staging | compliance | deploy | all
     required: false
     default: pr
   profile:
@@ -45,7 +45,7 @@ runs:
   steps:
     - name: Browser toolchain (staging, compliance, all)
       # Why here and not in the caller: the toolchain belongs to the gate's own package-lock, pinned with the action.
-      if: inputs.stage == 'staging' || inputs.stage == 'compliance' || inputs.stage == 'all'
+      if: inputs.stage == 'staging' || inputs.stage == 'compliance' || inputs.stage == 'deploy' || inputs.stage == 'all'
       shell: bash
       run: |
         cd "$GITHUB_ACTION_PATH"
@@ -66,7 +66,7 @@ runs:
         INPUT_REPO: ${{ inputs.repo }}
       run: |
         set -euo pipefail
-        case "$INPUT_STAGE" in pre-commit|pr|build|staging|compliance|all) ;; *) echo "::error::stage must be pre-commit|pr|build|staging|compliance|all"; exit 3 ;; esac
+        case "$INPUT_STAGE" in pre-commit|pr|build|staging|compliance|deploy|all) ;; *) echo "::error::stage must be pre-commit|pr|build|staging|compliance|deploy|all"; exit 3 ;; esac
         args=("$INPUT_STAGE" --repo "$INPUT_REPO")
         if [[ -n "$INPUT_PROFILE" ]]; then
           case "$INPUT_PROFILE" in sandbox|portfolio-demo|mvp-client|production) args+=(--profile "$INPUT_PROFILE") ;; *) echo "::error::unknown profile"; exit 3 ;; esac

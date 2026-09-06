@@ -10,7 +10,7 @@ readonly QA_GATE_HOME
 readonly LIB_DIR="$QA_GATE_HOME/lib"
 readonly TPL_DIR="$QA_GATE_HOME/templates"
 
-for lib in common detect secrets audit config-guard waivers version semgrep trivy stack-node stack-go stack-python ai-register spec summary init suggest; do
+for lib in common detect secrets audit config-guard waivers version semgrep trivy stack-node stack-go stack-python ai-register spec deploy summary init suggest; do
   # shellcheck disable=SC1090
   source "$LIB_DIR/$lib.sh"
 done
@@ -36,7 +36,8 @@ Usage:
 
 Stages:
   pre-commit | pr | build | staging | compliance | deploy | all
-  (staging + compliance need web.baseUrl in qa-gate.config.json; deploy prints SKIP until F4)
+  (staging + compliance need web.baseUrl in qa-gate.config.json; deploy = smoke + compliance against the LIVE site
+   after /opt/_scripts/deploy.sh ran: qa-gate.sh deploy --base-url https://example.de, or deploy.liveUrl in the config)
 
 Options:
   --repo <path>            target repo (default: git toplevel of cwd)

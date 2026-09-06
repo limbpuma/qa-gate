@@ -510,6 +510,20 @@
           "minimum": 1
         }
       }
+    },
+    "deploy": {
+      "type": "object",
+      "description": "The deploy stage verifies a site AFTER it was deployed; it never deploys.",
+      "properties": {
+        "liveUrl": {
+          "type": "string",
+          "description": "https URL of the live site (or pass --base-url)."
+        },
+        "smokeTimeoutSec": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
     }
   },
   "definitions": {

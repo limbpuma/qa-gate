@@ -15,7 +15,8 @@ Reply with ONE JSON object and nothing else. Allowed keys (omit what you cannot 
   },
   "commands": { "node": { "e2e": "<script name or auto>" } },
   "business": { "sector": "...", "ordering": "none|phone|online", "delivery": "none|pickup|delivery|both", "payments": "none|on-site|online", "forms": true|false, "newsletter": true|false, "ai": "none|chatbot|generated-content|both", "consumers": true|false, "stand": "YYYY-MM-DD" },
-  "rationale": ["one short line per decision, citing the digest evidence"]
+  "rationale": ["one short line per decision, citing the digest evidence"],
+  "questions": ["one short question per fact you could NOT infer from the digest and that changes which duties apply (ordering, payments, sector, consumers, AI use)"]
 }
 
 Rules:
@@ -29,5 +30,5 @@ Rules:
 - paths: the start page plus every public route that matters legally (menu, checkout, booking, contact). Max 8.
 - Prefer routes and ports that appear in the digest; when unsure, leave the key out instead of guessing.
 - When the digest contains a "business facts" block, derive sector and features FROM IT and cite it; do not return
-  "business" then. When it says "none found", propose a "business" object from the digest (a human confirms it) and
+  "business" then. Ask in "questions" only what the block or the digest leaves open — never guess a business fact. When it says "none found", propose a "business" object from the digest (a human confirms it) and
   keep features minimal: a landing page without ordering or payments declares none.

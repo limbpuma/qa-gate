@@ -183,6 +183,10 @@
     "context": ".",
     "target": ""
   },
+  "deploy": {
+    "liveUrl": "",
+    "smokeTimeoutSec": 20
+  },
   "web": {
     "baseUrl": "",
     "paths": [

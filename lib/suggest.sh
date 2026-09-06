@@ -60,7 +60,7 @@ suggest_run() {
       const raw = process.argv[1];
       const start = raw.indexOf("{"), end = raw.lastIndexOf("}");
       const j = JSON.parse(raw.slice(start, end + 1));
-      const allowed = ["profile", "web", "legal", "commands", "rationale", "business"];
+      const allowed = ["profile", "web", "legal", "commands", "rationale", "business", "questions"];
       for (const k of Object.keys(j)) if (!allowed.includes(k)) delete j[k];
       if (j.profile === "production") j.profile = "mvp-client";
       // A proposed business block goes to its own file for a human to confirm; it never enters the config.
@@ -85,5 +85,7 @@ suggest_run() {
     line("profile", j.profile); line("web.baseUrl", j.web?.baseUrl); line("web.paths", j.web?.paths); line("web.startCommand", j.web?.startCommand);
     line("legal.features", j.legal?.features); line("legal.checkoutPath", j.legal?.checkoutPath); line("legal.ai.chatSelector", j.legal?.ai?.chatSelector);
     for (const r of j.rationale || []) console.log(`  · ${r}`);
+    // Why questions: the facts a model cannot see decide which German duties apply; a human answers, the gate enforces.
+    if ((j.questions || []).length) { console.log("  open questions for the owner (answer them in docs/BUSINESS.md):"); for (const q of j.questions) console.log(`  ? ${q}`); }
   ' "$out"
 }

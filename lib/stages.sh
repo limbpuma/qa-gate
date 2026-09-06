@@ -191,10 +191,6 @@ stage_compliance_body() {
 stage_staging()    { run_web_stage stage_staging_body; }
 stage_compliance() { run_web_stage stage_compliance_body; }
 
-stage_not_installed() {
-  run_check "$STAGE" false mark_skip "module not installed (F4)"
-}
-
 # Runs one stage end to end: paths, checks, JSON. Does not print or exit.
 run_stage_inner() {
   setup_report_paths
@@ -210,7 +206,7 @@ run_stage_inner() {
     build)      stage_build ;;
     staging)    stage_staging ;;
     compliance) stage_compliance ;;
-    deploy)     stage_not_installed ;;
+    deploy)     stage_deploy ;;
   esac
   STAGE_DURATION=$(( $(date +%s) - started ))
   write_verdict

@@ -76,6 +76,7 @@ and one line per run in `history.jsonl` (`qa-gate.sh trend`).
 | `build` | Docker build · Trivy image · SBOM | Docker |
 | `staging` | Pa11y · Lighthouse · your e2e suite · Nuclei | a running app |
 | `compliance` | axe (EN 301 549) · German legal rules · evidence bundle | a running app |
+| `deploy` | smoke on the live URL, then the compliance checks against it | a deployed site |
 
 | Profile | What runs | For |
 |---|---|---|

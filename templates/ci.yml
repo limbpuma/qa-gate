@@ -96,7 +96,7 @@ jobs:
       - name: Compliance against the live site
         uses: limbpuma/qa-gate@bec1b847c4f8227b9734d7d171a01fd695b583a6 # v0.9.0
         with:
-          stage: compliance
+          stage: deploy
           base-url: ${{ vars.LIVE_URL }} # validated as https inside the action; never interpolated into a shell line
       - name: Upload evidence bundle
         if: always()
