@@ -36,6 +36,7 @@ const BASE = {
   forms: { email: false, hint: true, newsletter: false, doi: true },
   ai: { chat: true, disclosure: true, generated: true, label: true, tel: true },
   sector: { on: false, kammer: true, verguetung: true, link: true, testsieger: false },
+  extraLinks: '',
 };
 
 function merge(base, over) {
@@ -98,7 +99,7 @@ ${o.head}
 ${o.preConsentScript ? `<script>${o.preConsentScript}</script>` : ''}
 </head>
 <body>
-<header><nav aria-label="Hauptnavigation"><a href="/">Start</a> · <a href="/speisekarte">Speisekarte</a> · <a href="/kasse">Kasse</a></nav></header>
+<header><nav aria-label="Hauptnavigation"><a href="/">Start</a> · <a href="/speisekarte">Speisekarte</a> · <a href="/kasse">Kasse</a> ${o.extraLinks}</nav></header>
 <main id="main">
 <h1>Willkommen bei Fixture Pizzeria</h1>
 <p>Lieferung und Abholung in Dortmund.</p>
@@ -167,7 +168,14 @@ const FIXTURES = {
   'consent.reject-path': { fail: { onReject: GA_IMG_JS } },
   'consent.post-consent-third-parties': { pass: { onAccept: YOUTUBE_IMG_JS, datenschutz: { youtube: true } }, fail: { onAccept: YOUTUBE_IMG_JS } },
   'a11y.html-lang': { fail: { lang: '' } },
-  'headers.security': { options: { fail: { headers: false } } },
+  'headers.csp': { options: { fail: { headers: false } } },
+  'headers.nosniff': { options: { fail: { headers: false } } },
+  'headers.frame-options': { options: { fail: { headers: false } } },
+  'headers.referrer-policy': { options: { fail: { headers: false } } },
+  // The fixture server speaks plain http, so HSTS can only prove its https-only SKIP here; the live run covers the rest.
+  'headers.hsts': { options: { pass: { expect: ['SKIP'] }, fail: { headers: false, expect: ['SKIP'] } } },
+  // Dead link: the fail page links to a path the runner answers with 404.
+  'links.internal': { options: { fail: { notFound: ['/kaputt'] } }, fail: { extraLinks: '<a href="/kaputt">Veranstaltungen</a>' } },
   'forms.datenschutz-hint': { options: { legal: { features: ['forms'] } }, pass: { forms: { email: true } }, fail: { forms: { email: true, hint: false } } },
   'forms.newsletter-doi': { options: { legal: { features: ['newsletter'] } }, pass: { forms: { newsletter: true } }, fail: { forms: { newsletter: true, doi: false } } },
   'ecommerce.checkout': { options: { legal: { checkoutPath: '/kasse' } }, fail: { kasse: { zahlungspflichtig: false } } },

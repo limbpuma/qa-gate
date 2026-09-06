@@ -33,9 +33,11 @@ function parseArgs(argv) {
   return out;
 }
 
-function serve(html, withHeaders) {
+function serve(html, withHeaders, notFound = []) {
   return new Promise((resolve) => {
     const server = createServer((req, res) => {
+      const path = (req.url || '/').split('?')[0].replace(/\/+$/, '') || '/';
+      if (notFound.includes(path)) { res.writeHead(404, { 'content-type': 'text/html; charset=utf-8' }); res.end('<!doctype html><html lang="de"><body>404</body></html>'); return; }
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', ...(withHeaders ? SECURITY_HEADERS : {}) });
       res.end(html);
     });
@@ -63,7 +65,7 @@ async function runVariant(id, variant, options, workDir) {
   const html = readFileSync(join(FIXTURES, id, `${variant}.html`), 'utf8');
   const variantOptions = options[variant] || {};
   const legal = deepMerge(options.legal || {}, variantOptions.legal || {});
-  const { server, base } = await serve(html, variantOptions.headers !== false);
+  const { server, base } = await serve(html, variantOptions.headers !== false, variantOptions.notFound || []);
   const out = join(workDir, `${id}-${variant}.json`);
   try {
     const { stderr } = await runScan(['--out', out, '--base', base, '--legal', JSON.stringify(legal), '--paths', JSON.stringify(options.paths || ['/']), '--profile', 'production', '--rule', id]);
@@ -75,10 +77,14 @@ async function runVariant(id, variant, options, workDir) {
   }
 }
 
-function verdict(id, pass, fail) {
+// A rule may declare what its fail page must produce (default FAIL or WARN); e.g. an https-only header rule can only
+// prove SKIP on a plain-http fixture server.
+function verdict(id, pass, fail, options) {
   const problems = [];
-  if (pass.status !== 'PASS') problems.push(`pass.html → ${pass.status} (${pass.detail})`);
-  if (!['FAIL', 'WARN'].includes(fail.status)) problems.push(`fail.html → ${fail.status} (${fail.detail})`);
+  const expectFail = (options.fail && options.fail.expect) || ['FAIL', 'WARN'];
+  const expectPass = (options.pass && options.pass.expect) || ['PASS'];
+  if (!expectPass.includes(pass.status)) problems.push(`pass.html → ${pass.status} (${pass.detail})`);
+  if (!expectFail.includes(fail.status)) problems.push(`fail.html → ${fail.status} (${fail.detail})`);
   return problems;
 }
 
@@ -96,7 +102,7 @@ async function main() {
       const id = queue.shift();
       const options = existsSync(join(FIXTURES, id, 'options.json')) ? JSON.parse(readFileSync(join(FIXTURES, id, 'options.json'), 'utf8')) : {};
       const [pass, fail] = await Promise.all([runVariant(id, 'pass', options, workDir), runVariant(id, 'fail', options, workDir)]);
-      const problems = verdict(id, pass, fail);
+      const problems = verdict(id, pass, fail, options);
       if (problems.length) { failed++; console.log(`FAIL  ${id}: ${problems.join('; ')}`); }
       else console.log(`ok    ${id}  pass=${pass.status} fail=${fail.status}`);
     }

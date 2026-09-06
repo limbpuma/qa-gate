@@ -5,103 +5,510 @@
   "description": "Deep-merged over templates/qa-gate.config.json. Only what differs from the template needs to be here. Guarded by the gate-config check: a change on a branch is FAIL until reviewed.",
   "type": "object",
   "properties": {
-    "$schema": { "type": "string" },
-    "version": { "type": "integer", "const": 1 },
-    "gateVersion": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$", "description": "Gate version this repo expects; written by init, moved by `qa-gate.sh update`." },
-    "profile": { "type": "string", "enum": ["auto", "sandbox", "portfolio-demo", "mvp-client", "production"], "description": "auto = DEPLOY_PROFILE from .env, infra/.env or deploy/.env, else portfolio-demo." },
+    "$schema": {
+      "type": "string"
+    },
+    "version": {
+      "type": "integer",
+      "const": 1
+    },
+    "gateVersion": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Gate version this repo expects; written by init, moved by `qa-gate.sh update`."
+    },
+    "profile": {
+      "type": "string",
+      "enum": [
+        "auto",
+        "sandbox",
+        "portfolio-demo",
+        "mvp-client",
+        "production"
+      ],
+      "description": "auto = DEPLOY_PROFILE from .env, infra/.env or deploy/.env, else portfolio-demo."
+    },
     "profiles": {
       "type": "object",
       "additionalProperties": {
         "type": "object",
         "properties": {
-          "skip": { "type": "array", "items": { "type": "string" }, "description": "Check ids or stage names this profile does not run (recorded as SKIP with the reason)." },
-          "lighthouse": { "$ref": "#/definitions/lighthouse" },
-          "sitemapMaxPages": { "type": "integer", "minimum": 0 },
-          "commitHistory": { "type": "boolean" }
+          "skip": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Check ids or stage names this profile does not run (recorded as SKIP with the reason)."
+          },
+          "lighthouse": {
+            "$ref": "#/definitions/lighthouse"
+          },
+          "sitemapMaxPages": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "commitHistory": {
+            "type": "boolean"
+          }
         }
       }
     },
-    "stack": { "oneOf": [{ "type": "string", "enum": ["auto", "node", "go", "python"] }, { "type": "array", "items": { "type": "string", "enum": ["node", "go", "python"] } }] },
-    "git": { "type": "object", "properties": { "base": { "type": "string", "description": "Base branch for gate-config and the secrets diff; auto = main, else master." } } },
+    "stack": {
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "auto",
+            "node",
+            "go",
+            "python"
+          ]
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "node",
+              "go",
+              "python"
+            ]
+          }
+        }
+      ]
+    },
+    "git": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "type": "string",
+          "description": "Base branch for gate-config and the secrets diff; auto = main, else master."
+        }
+      }
+    },
     "commands": {
       "type": "object",
       "properties": {
-        "node": { "type": "object", "additionalProperties": { "type": "string" }, "description": "auto = package.json script of the same name, else a pnpm workspace script." },
-        "go": { "type": "object", "additionalProperties": { "type": "string" } },
-        "python": { "type": "object", "properties": { "lint": { "type": "string" }, "unit": { "type": "string" }, "env": { "type": "object", "additionalProperties": { "type": "string" } } } }
+        "node": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "auto = package.json script of the same name, else a pnpm workspace script."
+        },
+        "go": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "python": {
+          "type": "object",
+          "properties": {
+            "lint": {
+              "type": "string"
+            },
+            "unit": {
+              "type": "string"
+            },
+            "env": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          }
+        }
       }
     },
     "coverage": {
       "type": "object",
       "properties": {
-        "min": { "type": "number", "minimum": 0, "maximum": 100 },
-        "ratchet": { "type": "boolean", "description": "Coverage may never drop below the last committed value minus tolerance." },
-        "ratchetFile": { "type": "string" },
-        "tolerance": { "type": "number", "minimum": 0 }
+        "min": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "ratchet": {
+          "type": "boolean",
+          "description": "Coverage may never drop below the last committed value minus tolerance."
+        },
+        "ratchetFile": {
+          "type": "string"
+        },
+        "tolerance": {
+          "type": "number",
+          "minimum": 0
+        }
       }
     },
-    "secrets": { "type": "object", "properties": { "excludes": { "type": "array", "items": { "type": "string" } } } },
+    "secrets": {
+      "type": "object",
+      "properties": {
+        "excludes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
     "waivers": {
       "type": "array",
       "description": "Accepted risks with an expiry: that check's FAIL becomes WARN until the date. `by` is required from mvp-client, `reason` in production.",
       "items": {
         "type": "object",
-        "required": ["check", "until"],
+        "required": [
+          "check",
+          "until"
+        ],
         "additionalProperties": false,
         "properties": {
-          "check": { "type": "string", "description": "A check id (trivy-fs, coverage, audit …) or a legal rule id (vsbg.odr-link …)." },
-          "until": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
-          "reason": { "type": "string" },
-          "by": { "type": "string", "description": "The person who accepted the risk." }
+          "check": {
+            "type": "string",
+            "description": "A check id (trivy-fs, coverage, audit …) or a legal rule id (vsbg.odr-link …)."
+          },
+          "until": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "by": {
+            "type": "string",
+            "description": "The person who accepted the risk."
+          }
         }
       }
     },
-    "semgrep": { "type": "object", "properties": { "image": { "type": "string" }, "rulesets": { "type": "array", "items": { "type": "string" } }, "stackRulesets": { "type": "object" }, "blockOn": { "type": "string", "enum": ["ERROR", "WARNING"] }, "changedOnly": { "type": "boolean" } } },
-    "trivy": { "type": "object", "properties": { "image": { "type": "string" }, "severity": { "type": "string" }, "ignoreUnfixed": { "type": "boolean" }, "scanners": { "type": "string" }, "timeoutMin": { "type": "integer" }, "skipDirs": { "type": "array", "items": { "type": "string" } } } },
-    "audit": { "type": "object", "properties": { "level": { "type": "string", "enum": ["low", "moderate", "high", "critical"] } } },
-    "build": { "type": "object", "properties": { "dockerfile": { "type": "string" }, "context": { "type": "string" }, "target": { "type": "string" } } },
+    "semgrep": {
+      "type": "object",
+      "properties": {
+        "image": {
+          "type": "string"
+        },
+        "rulesets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "stackRulesets": {
+          "type": "object"
+        },
+        "blockOn": {
+          "type": "string",
+          "enum": [
+            "ERROR",
+            "WARNING"
+          ]
+        },
+        "changedOnly": {
+          "type": "boolean"
+        }
+      }
+    },
+    "trivy": {
+      "type": "object",
+      "properties": {
+        "image": {
+          "type": "string"
+        },
+        "severity": {
+          "type": "string"
+        },
+        "ignoreUnfixed": {
+          "type": "boolean"
+        },
+        "scanners": {
+          "type": "string"
+        },
+        "timeoutMin": {
+          "type": "integer"
+        },
+        "skipDirs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "audit": {
+      "type": "object",
+      "properties": {
+        "level": {
+          "type": "string",
+          "enum": [
+            "low",
+            "moderate",
+            "high",
+            "critical"
+          ]
+        }
+      }
+    },
+    "build": {
+      "type": "object",
+      "properties": {
+        "dockerfile": {
+          "type": "string"
+        },
+        "context": {
+          "type": "string"
+        },
+        "target": {
+          "type": "string"
+        }
+      }
+    },
     "web": {
       "type": "object",
       "properties": {
-        "baseUrl": { "type": "string", "description": "Empty = staging and compliance are SKIP." },
-        "paths": { "oneOf": [{ "type": "array", "items": { "type": "string" } }, { "type": "string", "const": "sitemap" }], "description": "Pages to audit, or \"sitemap\" to read /sitemap.xml (capped per profile; legal pages always included)." },
-        "sitemapMaxPages": { "type": "integer", "minimum": 1 },
-        "startCommand": { "type": "string" },
-        "readyPath": { "type": "string" },
-        "startTimeoutSec": { "type": "integer" },
-        "lighthouse": { "$ref": "#/definitions/lighthouse" },
-        "pa11y": { "type": "object", "properties": { "standard": { "type": "string" }, "runners": { "type": "array", "items": { "type": "string" } } } },
-        "axe": { "type": "object", "properties": { "tags": { "type": "array", "items": { "type": "string" } }, "warnTags": { "type": "array", "items": { "type": "string" } }, "blockImpacts": { "type": "array", "items": { "type": "string" } } } },
-        "nuclei": { "type": "object", "properties": { "enabled": { "type": "boolean" }, "image": { "type": "string" }, "templates": { "type": "array", "items": { "type": "string" } }, "severity": { "type": "string" } } }
+        "baseUrl": {
+          "type": "string",
+          "description": "Empty = staging and compliance are SKIP."
+        },
+        "paths": {
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "string",
+              "const": "sitemap"
+            }
+          ],
+          "description": "Pages to audit, or \"sitemap\" to read /sitemap.xml (capped per profile; legal pages always included)."
+        },
+        "sitemapMaxPages": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "startCommand": {
+          "type": "string"
+        },
+        "readyPath": {
+          "type": "string"
+        },
+        "startTimeoutSec": {
+          "type": "integer"
+        },
+        "lighthouse": {
+          "$ref": "#/definitions/lighthouse"
+        },
+        "pa11y": {
+          "type": "object",
+          "properties": {
+            "standard": {
+              "type": "string"
+            },
+            "runners": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "axe": {
+          "type": "object",
+          "properties": {
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "warnTags": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "blockImpacts": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "nuclei": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "image": {
+              "type": "string"
+            },
+            "templates": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "severity": {
+              "type": "string"
+            }
+          }
+        }
       }
     },
     "legal": {
       "type": "object",
       "properties": {
-        "impressumPath": { "type": "string" },
-        "datenschutzPath": { "type": "string" },
-        "barrierefreiheitPath": { "type": "string" },
-        "agbPath": { "type": "string" },
-        "widerrufPath": { "type": "string" },
-        "checkoutPath": { "type": "string" },
-        "sector": { "type": "string", "description": "Loads lib/web/legal/packs/<sector>.json; an unknown sector is FAIL." },
-        "features": { "type": "array", "items": { "type": "string", "enum": ["shop", "food", "forms", "newsletter"] } },
-        "allowedHosts": { "type": "array", "items": { "type": "string" }, "description": "First-party CDN hosts that are not third parties." },
-        "consent": { "type": "object", "properties": { "required": { "type": "boolean" }, "acceptText": { "type": "string" }, "rejectText": { "type": "string" }, "settingsText": { "type": "string" } } },
-        "requiredHeaders": { "type": "array", "items": { "type": "string" } },
-        "impressum": { "type": "object", "properties": { "requiredPatterns": { "type": "array", "items": { "type": "string" } } } },
-        "ai": { "type": "object", "properties": { "enabled": { "oneOf": [{ "type": "boolean" }, { "type": "string", "const": "auto" }] }, "chatSelector": { "type": "string" }, "disclosureText": { "type": "string" }, "providers": { "type": "array", "items": { "type": "string" } }, "registerPath": { "type": "string" } } }
+        "impressumPath": {
+          "type": "string"
+        },
+        "datenschutzPath": {
+          "type": "string"
+        },
+        "barrierefreiheitPath": {
+          "type": "string"
+        },
+        "agbPath": {
+          "type": "string"
+        },
+        "widerrufPath": {
+          "type": "string"
+        },
+        "checkoutPath": {
+          "type": "string"
+        },
+        "sector": {
+          "type": "string",
+          "description": "Loads lib/web/legal/packs/<sector>.json; an unknown sector is FAIL."
+        },
+        "features": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "shop",
+              "food",
+              "forms",
+              "newsletter"
+            ]
+          }
+        },
+        "allowedHosts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "First-party CDN hosts that are not third parties."
+        },
+        "consent": {
+          "type": "object",
+          "properties": {
+            "required": {
+              "type": "boolean"
+            },
+            "acceptText": {
+              "type": "string"
+            },
+            "rejectText": {
+              "type": "string"
+            },
+            "settingsText": {
+              "type": "string"
+            }
+          }
+        },
+        "impressum": {
+          "type": "object",
+          "properties": {
+            "requiredPatterns": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "ai": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "oneOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "string",
+                  "const": "auto"
+                }
+              ]
+            },
+            "chatSelector": {
+              "type": "string"
+            },
+            "disclosureText": {
+              "type": "string"
+            },
+            "providers": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "registerPath": {
+              "type": "string"
+            }
+          }
+        }
       }
     },
-    "report": { "type": "object", "properties": { "dir": { "type": "string" }, "keepLogs": { "type": "integer" }, "history": { "type": "boolean" }, "commitHistory": { "type": "boolean" } } }
+    "report": {
+      "type": "object",
+      "properties": {
+        "dir": {
+          "type": "string"
+        },
+        "keepLogs": {
+          "type": "integer"
+        },
+        "history": {
+          "type": "boolean"
+        },
+        "commitHistory": {
+          "type": "boolean"
+        }
+      }
+    }
   },
   "definitions": {
     "lighthouse": {
       "type": "object",
       "properties": {
-        "runs": { "type": "integer", "minimum": 1 },
-        "formFactors": { "type": "array", "items": { "type": "string", "enum": ["mobile", "desktop"] } },
-        "thresholds": { "type": "object", "additionalProperties": { "type": "number", "minimum": 0, "maximum": 100 } }
+        "runs": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "formFactors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "mobile",
+              "desktop"
+            ]
+          }
+        },
+        "thresholds": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          }
+        }
       }
     }
   }

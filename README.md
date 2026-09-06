@@ -88,7 +88,7 @@ Set `DEPLOY_PROFILE` in the repo's `.env` or `profile` in `qa-gate.config.json`.
 
 ## The German legal layer
 
-`compliance` runs a registry of 36 rules in a real browser, each with the law behind it, the date it applies
+`compliance` runs a registry of 42 rules in a real browser, each with the law behind it, the date it applies
 from, and the profiles it runs in: Impressum and Datenschutz reachable from every page and complete
 (DSGVO Art. 13 sections, DSB, third-country transfers), nothing third-party and no Google Fonts before consent,
 an equally prominent Ablehnen, BFSG accessibility statement, shop and food duties, VSBG, the obsolete ODR link,
@@ -98,7 +98,7 @@ the four AI Act checks.
   profession's Kammer, register, supervising authority, liability insurance, mandatory statements and prohibited
   wording. Packs: gastro, handwerk, pflege, versicherung, steuerberatung, rechtsanwalt, arzt, immobilien, kfz.
   Each ends with `pruefen`: the open questions for a lawyer.
-- **Every rule proves itself.** 36 fixture pairs, one pass and one fail page per rule, run in under a minute.
+- **Every rule proves itself.** 42 fixture pairs, one pass and one fail page per rule, run in under a minute.
 - **Stays current without tokens.** Every four weeks a task hashes each rule's official source; a change leaves
   a diff for a human to turn into a pull request. Never merged automatically.
 - **Evidence.** `qa-report/compliance-<date>.md`: the dated bundle for the client's DSB or a Kammer.

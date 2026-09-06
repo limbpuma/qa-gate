@@ -212,7 +212,8 @@ test_docker_audit_and_semgrep() {
   printf 'const AWS_ACCESS_KEY_ID = "%s%s";\nconst AWS_SECRET = "%s%s";\n' "$FAKE_AWS_ID_PREFIX" "$FAKE_AWS_ID_BODY" "$FAKE_AWS_SECRET_HEAD" "$FAKE_AWS_SECRET_TAIL" > "$dest/src/planted-bad.js"
   (cd "$dest" && git_quiet add -A && git_commit_quiet -m "plant vulnerable dep and eval")
   out=$(run_gate "$dest" pr --only audit,semgrep) && { fail "$label" "expected FAIL"; return; }
-  grep -qE '^FAIL[[:space:]]+audit' <<< "$out" || { fail "$label" "no FAIL audit line · $(printf '%s' "$out" | head -6)"; return; }
+  grep -qE '^FAIL[[:space:]]+audit[[:space:]]+[0-9]+ ≥ high.*lodash' <<< "$out" || { fail "$label" "audit line does not name the package · $(grep audit <<< "$out")"; return; }
+  grep -q '"package": "lodash"' "$dest/qa-report/audit.json" || { fail "$label" "audit.json lacks lodash"; return; }
   grep -qE '^(FAIL|WARN)[[:space:]]+semgrep[[:space:]]+[0-9]+ error / [1-9]' <<< "$out" || \
     grep -qE '^FAIL[[:space:]]+semgrep[[:space:]]+[1-9]' <<< "$out" || { fail "$label" "semgrep counted nothing · $(grep semgrep <<< "$out")"; return; }
   # 7c: on a branch Semgrep scans only the changed files and must still find a key planted there.
@@ -250,7 +251,7 @@ test_web_compliance_blocks_bad_site() {
   node -e '
     const j = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
     const f = (id) => j.checks.find((c) => c.id === id);
-    const failing = ["consent.google-fonts", "consent.banner", "headers.security", "ai.disclosure", "ai.content-label", "ai.datenschutz-provider",
+    const failing = ["consent.google-fonts", "consent.banner", "headers.csp", "headers.nosniff", "headers.frame-options", "ai.disclosure", "ai.content-label", "ai.datenschutz-provider",
       "impressum.fields", "consent.withdrawal-link", "datenschutz.content", "datenschutz.third-country"].filter((id) => f(id).status !== "FAIL");
     if (failing.length) { process.stdout.write("not FAIL: " + failing.join(", ")); process.exit(1); }
     // The waived rule keeps its finding but reports WARN with the owner and the date.

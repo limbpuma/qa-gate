@@ -229,12 +229,6 @@
       "rejectText": "Ablehnen|Nur notwendige|Reject",
       "settingsText": "Cookie-Einstellungen|Cookie Einstellungen|Datenschutzeinstellungen|Einwilligung widerrufen|Privatsphäre-Einstellungen|Cookie settings|Privacy settings"
     },
-    "requiredHeaders": [
-      "content-security-policy",
-      "x-content-type-options",
-      "x-frame-options",
-      "referrer-policy"
-    ],
     "impressum": {
       "requiredPatterns": []
     },

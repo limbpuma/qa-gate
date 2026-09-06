@@ -183,9 +183,8 @@
       "source": "https://www.etsi.org/deliver/etsi_en/301500_301599/301549/03.02.01_60/en_301549v030201p.pdf"
     },
     {
-      "id": "headers.security",
-      "check": "securityHeaders",
-      "law": "DSGVO Art. 32 (Stand der Technik)",
+      "id": "headers.csp",
+      "check": "securityHeader",
       "since": "2018-05-25",
       "profiles": [
         "portfolio-demo",
@@ -193,7 +192,71 @@
         "production"
       ],
       "requires": [],
-      "source": "https://eur-lex.europa.eu/eli/reg/2016/679/oj"
+      "source": "https://eur-lex.europa.eu/eli/reg/2016/679/oj",
+      "law": "DSGVO Art. 32 (Stand der Technik): Content-Security-Policy against injected scripts",
+      "header": "content-security-policy",
+      "severity": "FAIL"
+    },
+    {
+      "id": "headers.hsts",
+      "check": "securityHeader",
+      "since": "2018-05-25",
+      "profiles": [
+        "portfolio-demo",
+        "mvp-client",
+        "production"
+      ],
+      "requires": [],
+      "source": "https://eur-lex.europa.eu/eli/reg/2016/679/oj",
+      "law": "DSGVO Art. 32: Strict-Transport-Security (https only)",
+      "header": "strict-transport-security",
+      "severity": "FAIL",
+      "httpsOnly": true
+    },
+    {
+      "id": "headers.nosniff",
+      "check": "securityHeader",
+      "since": "2018-05-25",
+      "profiles": [
+        "portfolio-demo",
+        "mvp-client",
+        "production"
+      ],
+      "requires": [],
+      "source": "https://eur-lex.europa.eu/eli/reg/2016/679/oj",
+      "law": "DSGVO Art. 32: X-Content-Type-Options nosniff",
+      "header": "x-content-type-options",
+      "severity": "FAIL"
+    },
+    {
+      "id": "headers.frame-options",
+      "check": "securityHeader",
+      "since": "2018-05-25",
+      "profiles": [
+        "portfolio-demo",
+        "mvp-client",
+        "production"
+      ],
+      "requires": [],
+      "source": "https://eur-lex.europa.eu/eli/reg/2016/679/oj",
+      "law": "DSGVO Art. 32: X-Frame-Options (clickjacking)",
+      "header": "x-frame-options",
+      "severity": "FAIL"
+    },
+    {
+      "id": "headers.referrer-policy",
+      "check": "securityHeader",
+      "since": "2018-05-25",
+      "profiles": [
+        "portfolio-demo",
+        "mvp-client",
+        "production"
+      ],
+      "requires": [],
+      "source": "https://eur-lex.europa.eu/eli/reg/2016/679/oj",
+      "law": "DSGVO Art. 5 Abs. 1 lit. c (Datenminimierung): Referrer-Policy",
+      "header": "referrer-policy",
+      "severity": "WARN"
     },
     {
       "id": "forms.datenschutz-hint",
@@ -490,6 +553,19 @@
       ],
       "requires": [],
       "source": "https://github.com/limbpuma/qa-gate/blob/main/docs/REFERENCE.md"
+    },
+    {
+      "id": "links.internal",
+      "check": "internalLinks",
+      "law": "reachability: dead internal links (DDG § 5 legal pages must be reachable) and http:// self-links on https",
+      "since": "2024-05-14",
+      "profiles": [
+        "portfolio-demo",
+        "mvp-client",
+        "production"
+      ],
+      "requires": [],
+      "source": "https://www.gesetze-im-internet.de/ddg/__5.html"
     }
   ]
 }

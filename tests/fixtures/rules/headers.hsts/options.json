@@ -1,0 +1,13 @@
+{
+  "pass": {
+    "expect": [
+      "SKIP"
+    ]
+  },
+  "fail": {
+    "headers": false,
+    "expect": [
+      "SKIP"
+    ]
+  }
+}
