@@ -51,13 +51,13 @@ jobs:
 
       - name: Gate — pr
         id: pr
-        uses: limbpuma/qa-gate@81e2d7a1ce077626279b77091f0382d8606f5b11 # v0.8.1
+        uses: limbpuma/qa-gate@d17fbb127597fab268cffec418f04a42592202a0 # v0.8.2
         with:
           stage: pr
 
       - name: Gate — build
         if: hashFiles('Dockerfile', 'apps/*/Dockerfile') != ''
-        uses: limbpuma/qa-gate@81e2d7a1ce077626279b77091f0382d8606f5b11 # v0.8.1
+        uses: limbpuma/qa-gate@d17fbb127597fab268cffec418f04a42592202a0 # v0.8.2
         with:
           stage: build
 
@@ -94,7 +94,7 @@ jobs:
         with:
           node-version: 22
       - name: Compliance against the live site
-        uses: limbpuma/qa-gate@81e2d7a1ce077626279b77091f0382d8606f5b11 # v0.8.1
+        uses: limbpuma/qa-gate@d17fbb127597fab268cffec418f04a42592202a0 # v0.8.2
         with:
           stage: compliance
           base-url: ${{ vars.LIVE_URL }} # validated as https inside the action; never interpolated into a shell line
