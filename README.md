@@ -31,6 +31,8 @@ cd your-repo && bash ~/.claude/scripts/qa-gate/qa-gate.sh init                # 
 bash scripts/qa-gate.sh pre-commit   # seconds, no Docker — the git hook runs it for you
 bash scripts/qa-gate.sh pr           # before merging (Docker for Semgrep + Trivy)
 bash scripts/qa-gate.sh all          # before shipping: every stage, stops at the first FAIL
+bash scripts/qa-gate.sh deploy --base-url https://example.de   # after a deploy: smoke + compliance on the live site
+bash scripts/qa-gate.sh ui --open    # the page: runs, checks, findings, legal table, live view, export
 ```
 
 In GitHub Actions the gate is one step, no secrets ([full workflow](templates/ci.yml)):
@@ -96,7 +98,7 @@ Set `DEPLOY_PROFILE` in the repo's `.env` or `profile` in `qa-gate.config.json`.
 
 ## The German legal layer
 
-`compliance` runs a registry of 42 rules in a real browser, each with the law behind it, the date it applies
+`compliance` runs a registry of 43 rules in a real browser, each with the law behind it, the date it applies
 from, and the profiles it runs in: Impressum and Datenschutz reachable from every page and complete
 (DSGVO Art. 13 sections, DSB, third-country transfers), nothing third-party and no Google Fonts before consent,
 an equally prominent Ablehnen, BFSG accessibility statement, shop and food duties, VSBG, the obsolete ODR link,
@@ -106,7 +108,7 @@ the four AI Act checks.
   profession's Kammer, register, supervising authority, liability insurance, mandatory statements and prohibited
   wording. Packs: gastro, handwerk, pflege, versicherung, steuerberatung, rechtsanwalt, arzt, immobilien, kfz.
   Each ends with `pruefen`: the open questions for a lawyer.
-- **Every rule proves itself.** 42 fixture pairs, one pass and one fail page per rule, run in under a minute.
+- **Every rule proves itself.** 43 fixture pairs, one pass and one fail page per rule, run in under a minute.
 - **Stays current without tokens.** Every four weeks a task hashes each rule's official source; a change leaves
   a diff for a human to turn into a pull request. Never merged automatically.
 - **Evidence.** `qa-report/compliance-<date>.md`: the dated bundle for the client's DSB or a Kammer.
