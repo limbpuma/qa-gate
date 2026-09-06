@@ -15,6 +15,8 @@ readonly USER_AGENT="qa-gate-legal-watch/1.0 (+https://github.com/limbpuma/qa-ga
 changed=0 checked=0 unreachable=0
 while IFS=$'\t' read -r id source; do
   [[ -z "$source" ]] && continue
+  # Rules whose "source" is this repo's own documentation (configuration sanity rules) are not laws to watch.
+  [[ "$source" == *github.com/limbpuma/qa-gate* ]] && continue
   checked=$((checked + 1))
   body=$(curl -sL --max-time "$FETCH_TIMEOUT_SEC" -A "$USER_AGENT" "$source" 2>/dev/null || true)
   if [[ -z "$body" ]]; then unreachable=$((unreachable + 1)); echo "UNREACHABLE $id $source"; continue; fi

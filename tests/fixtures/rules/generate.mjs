@@ -187,6 +187,8 @@ const FIXTURES = {
   'sector.statements': { options: { legal: { sector: 'steuerberatung' } }, pass: { sector: { on: true } }, fail: { sector: { on: true, verguetung: false } } },
   'sector.links': { options: { legal: { sector: 'steuerberatung' } }, pass: { sector: { on: true } }, fail: { sector: { on: true, link: false } } },
   'sector.forbidden-wording': { options: { legal: { sector: 'steuerberatung' } }, pass: { sector: { on: true } }, fail: { sector: { on: true, testsieger: true } } },
+  // The base page has a Kasse with "Zahlungspflichtig bestellen": declaring shop matches, leaving it out does not.
+  'legal.features-evidence': { options: { pass: { legal: { features: ['shop'] } }, fail: { legal: { features: [] } } } },
   'datenschutz.content': { fail: { datenschutz: { verantwortlicher: false, betroffenenrechte: false, beschwerderecht: false } } },
   'datenschutz.dsb': { options: { fail: { legal: { sector: 'pflege' } } }, fail: { datenschutz: { dsb: false } } },
   'datenschutz.third-country': { pass: { head: GSTATIC_IMG }, fail: { head: GSTATIC_IMG, datenschutz: { thirdCountry: false } } },

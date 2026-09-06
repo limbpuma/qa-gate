@@ -1,0 +1,14 @@
+{
+  "pass": {
+    "legal": {
+      "features": [
+        "shop"
+      ]
+    }
+  },
+  "fail": {
+    "legal": {
+      "features": []
+    }
+  }
+}

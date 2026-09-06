@@ -477,6 +477,19 @@
       ],
       "requires": [],
       "source": "https://eur-lex.europa.eu/eli/reg/2016/679/oj"
+    },
+    {
+      "id": "legal.features-evidence",
+      "check": "featuresEvidence",
+      "law": "configuration sanity (shop, newsletter, forms rules depend on legal.features)",
+      "since": "2026-09-06",
+      "profiles": [
+        "portfolio-demo",
+        "mvp-client",
+        "production"
+      ],
+      "requires": [],
+      "source": "https://github.com/limbpuma/qa-gate/blob/main/docs/REFERENCE.md"
     }
   ]
 }
