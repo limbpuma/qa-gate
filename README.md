@@ -38,7 +38,7 @@ bash scripts/qa-gate.sh ui --open    # the page: runs, checks, findings, legal t
 In GitHub Actions the gate is one step, no secrets ([full workflow](templates/ci.yml)):
 
 ```yaml
-- uses: limbpuma/qa-gate@v0.11.0
+- uses: limbpuma/qa-gate@v0.11.1
   with:
     stage: pr
 ```
