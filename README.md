@@ -69,12 +69,14 @@ log   qa-report/_logs/pr-20260905-1040.log
 Next to the summary: the JSON verdict an orchestrator checks, a SARIF file GitHub shows in the PR diff,
 and one line per run in `history.jsonl` (`qa-gate.sh trend`).
 
-To see all of it in a browser: `bash scripts/qa-gate.sh ui --open`. A local page over the same files, the layout of
+To see all of it in a browser: `bash scripts/qa-gate.sh ui --open`, or `--ui` on a stage to start it first; when a
+page is running, every summary block ends with a `ui` line pointing at that run. A local page over the same files, the layout of
 a CI run page: runs per stage, every check with its detail, findings grouped by rule, the legal table with the law
 behind each rule, what needs a manual look, dependencies, the log. A **live** view follows a running gate. Views for
 the developer, the client (evidence only) and the agent (the block and the JSON). **Export HTML** saves a
 self-contained report you can send. No account, no server beyond your machine, no vendor: the page reads
-`qa-report/`, and everything it shows is also served as JSON under `/api`.
+`qa-report/`, and everything it shows is also served as JSON under `/api`. It never starts by itself as part of a
+verdict; it stops after two idle hours, and `ui --stop` ends it.
 
 ## Stages and profiles
 

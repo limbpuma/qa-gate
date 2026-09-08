@@ -537,6 +537,8 @@ test_ui_server() {
   [[ -n "$url" ]] || { fail "$label" "server printed no URL · $(cat "$dest/ui.out")"; return; }
   pid=$(node -e 'process.stdout.write(String(JSON.parse(require("fs").readFileSync(process.argv[1],"utf8")).pid))' "$dest/qa-report/_logs/ui.json")
   curl -s "$url/api/health" | grep -q '"tool": "qa-gate"' || { fail "$label" "health endpoint"; stop_pid "$pid"; return; }
+  # /api/where maps the gate's own (MSYS) path to the page of that repo.
+  curl -sG --data-urlencode "path=$dest" "$url/api/where" | grep -q '"path": "/repo/' || { fail "$label" "where endpoint did not resolve $dest"; stop_pid "$pid"; return; }
   local id run
   id=$(curl -s "$url/api/repos" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>process.stdout.write(JSON.parse(s)[0].id))')
   run=$(curl -s "$url/api/repo/$id/runs" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>process.stdout.write(JSON.parse(s)[0].file))')
@@ -550,10 +552,41 @@ test_ui_server() {
   # Export writes a self-contained HTML next to the reports.
   curl -s -X POST -d "repo=$id&run=$run&view=developer" "$url/export" | grep -q 'Report saved' || { fail "$label" "export failed"; stop_pid "$pid"; return; }
   ls "$dest"/qa-report/report-developer-pre-commit-*.html >/dev/null 2>&1 || { fail "$label" "export file missing"; stop_pid "$pid"; return; }
+  # With a page running, a stage prints a ui line pointing at this repo — and never starts a server itself.
+  out=$(run_gate "$dest" pre-commit --only secrets) || { fail "$label" "gate run with a ui up failed"; stop_pid "$pid"; return; }
+  grep -qE "^ui    $url/repo/" <<< "$out" || { fail "$label" "summary has no ui line · $(tail -3 <<< "$out")"; stop_pid "$pid"; return; }
   # A second server on the same port must reuse the first, not kill it or fail.
   port="${url##*:}"
   out=$(cd "$dest" && node "$QA_GATE_HOME/lib/ui/server.mjs" --repo "$dest" --home "$QA_GATE_HOME" --port "$port" 2>&1)
   grep -q 'already running' <<< "$out" || { fail "$label" "second instance did not reuse the first · $out"; stop_pid "$pid"; return; }
+  # ui --stop ends it through its own endpoint and clears the state files; the summary then has no ui line.
+  out=$(run_gate "$dest" ui --stop) || { fail "$label" "ui --stop exit $?"; stop_pid "$pid"; return; }
+  grep -q "stopped $url" <<< "$out" || { fail "$label" "stop said: $out"; stop_pid "$pid"; return; }
+  sleep 1
+  curl -s --max-time 2 "$url/api/health" >/dev/null 2>&1 && { fail "$label" "server still answering after --stop"; stop_pid "$pid"; return; }
+  out=$(run_gate "$dest" pre-commit --only secrets) || { fail "$label" "run after stop failed"; return; }
+  grep -qE '^ui    ' <<< "$out" && { fail "$label" "ui line printed with no server running"; return; }
+  pass "$label"
+}
+
+test_ui_autostart() {
+  local label="T27.ui-autostart" dest out url pid
+  dest=$(prep_fixture_repo node)
+  run_gate "$dest" init >/dev/null
+  # --ui starts the page in the background; the stage still ends with its own verdict and the URL is in the block.
+  out=$(run_gate "$dest" pr --no-docker --only secrets --ui) || { fail "$label" "stage with --ui exited $?"; return; }
+  grep -qE '^ui    http://127\.0\.0\.1:[0-9]+/repo/' <<< "$out" || { fail "$label" "no ui line after --ui · $(tail -3 <<< "$out")"; return; }
+  url=$(grep -oE 'http://127\.0\.0\.1:[0-9]+' <<< "$out" | head -1)
+  curl -s --max-time 2 "$url/api/health" | grep -q '"tool": "qa-gate"' || { fail "$label" "autostarted server does not answer"; return; }
+  # The hook only ever runs pre-commit: autostart must not happen there, even when asked.
+  run_gate "$dest" ui --stop >/dev/null
+  sleep 1
+  out=$(run_gate "$dest" pre-commit --only secrets --ui) || { fail "$label" "pre-commit with --ui exited $?"; return; }
+  grep -qE '^ui    ' <<< "$out" && { fail "$label" "autostart ran for pre-commit (the hook path)"; run_gate "$dest" ui --stop >/dev/null; return; }
+  # Nor in CI, where a stage must exit and nobody watches a page.
+  out=$(cd "$dest" && CI=true bash "$QA_GATE_SH" pr --no-docker --only secrets --ui 2>/dev/null) || { fail "$label" "CI run exited $?"; return; }
+  grep -qE '^ui    ' <<< "$out" && { fail "$label" "autostart ran in CI"; run_gate "$dest" ui --stop >/dev/null; return; }
+  pid=$(node -e 'try { process.stdout.write(String(JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")).pid)) } catch {}' "$dest/qa-report/_logs/ui.json" 2>/dev/null)
   stop_pid "$pid"
   pass "$label"
 }
@@ -582,6 +615,7 @@ test_spec_check
 test_shadow_pass
 test_deploy_stage
 test_ui_server
+test_ui_autostart
 if node "$SCRIPT_DIR/../scripts/validate-packs.mjs" >/dev/null 2>&1; then pass "T15.packs-valid"; else fail "T15.packs-valid" "$(node "$SCRIPT_DIR/../scripts/validate-packs.mjs" 2>&1 | grep -A3 FAIL | head -6)"; fi
 # Every legal rule has a fixture pair, and each pair proves the rule (pass.html → PASS, fail.html → FAIL/WARN).
 if out=$(node "$SCRIPT_DIR/../scripts/validate-rules.mjs" 2>&1); then pass "T21.rules-have-fixtures"; else fail "T21.rules-have-fixtures" "$(head -4 <<< "$out")"; fi

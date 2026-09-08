@@ -44,6 +44,10 @@ print_summary() {
   done
   printf 'json  %s\n' "$(relative_to_repo "$JSON_FILE")"
   printf 'log   %s\n' "$(relative_to_repo "$LOG_FILE")"
+  # Why only when one is already running: the gate never starts a server as a side effect of a verdict.
+  local ui_url
+  ui_url=$(ui_running_url)
+  if [[ -n "$ui_url" ]]; then printf 'ui    %s\n' "$ui_url"; fi
 }
 
 # SARIF 2.1.0 for GitHub code scanning: qa-report/gate-<stage>.sarif, rebuilt from the latest verdict on every run.

@@ -480,6 +480,15 @@
         },
         "commitHistory": {
           "type": "boolean"
+        },
+        "autoUi": {
+          "type": "boolean",
+          "description": "Start the report page in the background before a stage runs (never for pre-commit, never in CI). Same as --ui."
+        },
+        "uiIdleMinutes": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "The page stops itself after this many minutes without a request; 0 = never."
         }
       }
     },

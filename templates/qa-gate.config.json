@@ -273,6 +273,8 @@
     "dir": "qa-report",
     "keepLogs": 10,
     "history": true,
-    "commitHistory": false
+    "commitHistory": false,
+    "autoUi": false,
+    "uiIdleMinutes": 120
   }
 }

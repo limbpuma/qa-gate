@@ -14,6 +14,10 @@ Required local steps before pushing or opening a PR:
    that FAIL into a WARN until the date and is reviewed like any other config change.
 6. `bash scripts/qa-gate.sh update` moves the pinned gate version (`gateVersion`) — only on the base branch, on purpose.
 
+7. `bash scripts/qa-gate.sh ui` opens a local page over `qa-report/` (runs, checks, findings, the legal table, a live
+   view, export to a self-contained HTML). When a page is already running, every summary block ends with a `ui` line:
+   pass that URL on instead of describing the report. `--ui` on a stage starts it in the background first.
+
 Exit codes: `0` PASS · `1` FAIL · `3` usage/internal error. Report goes to `qa-report/gate-<stage>-<timestamp>.json`
 and `qa-report/_logs/<stage>-<timestamp>.log`. Summary on stdout is the contract — never write to stdout
 outside the summary block. Full check table and config reference: https://github.com/limbpuma/qa-gate/blob/main/docs/REFERENCE.md

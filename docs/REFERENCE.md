@@ -11,8 +11,10 @@ qa-gate.sh <stage> [options]      stage: pre-commit | pr | build | staging | com
 qa-gate.sh init [--web]           bootstrap a repo (config with gateVersion, shim, hook, ignore files, DoD block)
 qa-gate.sh update                 pin the installed gate version in qa-gate.config.json (gateVersion); syncs the history .gitignore rule
 qa-gate.sh trend [n]              last n runs from qa-report/history.jsonl
-qa-gate.sh ui [--port 4600] [--all] [--open] [--strict-port]
+qa-gate.sh ui [--port 4600] [--all] [--open] [--strict-port] [--idle <min>] [--stop]
                                   local page over qa-report/ (see "The ui page" below)
+
+--ui                     on any stage but pre-commit: start that page in the background first, then run
 qa-gate.sh suggest                AI proposes qa-gate.config.json (never overwrites)
 
 --repo <path>            target repo (default: git toplevel of cwd)
@@ -128,6 +130,7 @@ A waived check carries `"status": "WARN"` and `"waiver": { "check", "until", "by
 | `legal.features` | `[]` | business facts a human declares: `shop` = goods ordered and paid online (PAngV, Widerruf, Muster-Widerrufsformular; not for food consumed or delivered within minutes, § 312g Abs. 2 Nr. 2 BGB), `food` = food ordered at a distance (LMIV Art. 14 allergens block), `forms`, `newsletter`. A menu-only landing page declares none; `legal.features-evidence` warns when the page disagrees |
 | `legal.impressum.requiredPatterns` | `[]` | extra regexes the Impressum must contain (e.g. `HRB`, `USt-IdNr`) |
 | `report.dir` / `keepLogs` | `qa-report` / 10 | where verdicts and logs go; older logs per stage are pruned |
+| `report.autoUi` / `uiIdleMinutes` | false / 120 | start the page before a stage (as `--ui`); minutes without a request after which it stops itself, 0 = never |
 | `report.history` / `commitHistory` / `profiles.<p>.commitHistory` | true / false / true on mvp-client + production | `history.jsonl` written per run; `init` and `update` add `!qa-report/history.jsonl` to `.gitignore` when the profile commits it |
 | `$schema` | raw URL of `schemas/config.schema.json` | editor completion; carried into each repo's config by `init` |
 | `spec.files` / `codePaths` / `staleAfterDays` / `staleAfterCommits` | spec + README locations / `src app lib …` / 180 / 20 | where the business block is searched and when the `spec` check calls it stale |
@@ -197,13 +200,24 @@ Port policy: default 4600; busy → if `/api/health` there answers as a qa-gate 
 URL and exits), otherwise the OS picks a free port; `--strict-port` fails instead; nothing is ever killed. The URL and
 PID are written to `qa-report/_logs/ui.json`. `--all` adds every repo of `~/.claude/qa-gate/live-sites.json`.
 
+The gate never starts the page as a side effect of a verdict — a stage must end with an exit code, a server must
+not. Instead: when a page is **already** running, every summary block ends with `ui  <url>/repo/<id>` (resolved
+through `/api/where`, one local request, skipped when nothing answers). `--ui` on a stage, or `report.autoUi: true`,
+starts one in the background before the stage runs — never for `pre-commit` (that is the hook's path) and never when
+`CI` or `GITHUB_ACTIONS` is set. The page stops itself after `report.uiIdleMinutes` (120; `--idle 0` = never) and
+`qa-gate.sh ui --stop` ends it through `POST /api/shutdown`. Its URL and pid are written to `qa-report/_logs/ui.json`
+of every served repo and to `~/.claude/qa-gate/ui.json`; a running page that does not serve this repository is not
+reused, the new one takes a free port.
+
 Pages: `/` repositories with the latest run per stage · `/repo/<id>` runs and the trend from `history.jsonl` ·
 `/repo/<id>/run/<file>` one run (`?view=developer` checks, findings grouped by rule with source links, legal table,
 needs-review list, Lighthouse, dependencies, business facts, log · `?view=client` assumptions, legal table, review
 list, Lighthouse, evidence bundle · `?view=agent` the summary block and the JSON) · `/repo/<id>/live` follows a run
 over SSE from `qa-report/_logs/current.json` (written by `run_check`: stage, running check, checks done, verdict) and
 the newest log. `POST /export` (the only write) saves the current view as `qa-report/report-<view>-<stage>-<ts>.html`,
-self-contained. JSON for everything under `/api/health`, `/api/repos`, `/api/repo/<id>/runs|run/<file>|history|live`.
+self-contained. JSON for everything under `/api/health` (version, served repos, pid, idle), `/api/where?path=<dir>` (which page
+shows that directory), `/api/repos`, `/api/repo/<id>/runs|run/<file>|history|live`, and `POST /api/shutdown` (refused
+when the request carries an `Origin`, so only the command line can stop it).
 
 ## Live sites and legal watch (no tokens)
 

@@ -32,10 +32,11 @@ Usage:
   qa-gate.sh init [--web] [--repo <path>]
   qa-gate.sh update [--repo <path>]      pin the installed gate version in qa-gate.config.json (gateVersion)
   qa-gate.sh trend [n] [--repo <path>]   last n runs from qa-report/history.jsonl (verdict, coverage, Lighthouse, fails)
-  qa-gate.sh ui [--port 4600] [--all] [--open] [--strict-port]
+  qa-gate.sh ui [--port 4600] [--all] [--open] [--strict-port] [--idle <min>] [--stop]
                                          local page over qa-report/: runs, checks, findings, legal table, live view,
                                          export as self-contained HTML; --all adds the repos of live-sites.json;
-                                         a busy port is never killed: an existing ui is reused, else a free port
+                                         a busy port is never killed: an existing ui is reused, else a free port;
+                                         stops itself after --idle minutes (120 by default, 0 = never); --stop ends it
   qa-gate.sh suggest [--repo <path>]     AI proposes qa-gate.config.json (structure-only digest; never overwrites)
 
 Stages:
@@ -46,6 +47,8 @@ Stages:
 Options:
   --repo <path>            target repo (default: git toplevel of cwd)
   --profile <name>         run as this profile (overrides qa-gate.config.json and DEPLOY_PROFILE)
+  --ui                     start the report page in the background before the stage runs and print its URL
+                           (never from the pre-commit hook or in CI; report.autoUi does the same permanently)
   --only <id,id,...>       run only these check ids
   --allow-config-change    gate-config differing from the base branch is WARN, not FAIL
   --no-docker              Docker-based checks are SKIP instead of FAIL
@@ -78,6 +81,9 @@ parse_args() {
       --strict-port)         UI_STRICT=1; shift ;;
       --all)                 UI_ALL=1; shift ;;
       --open)                UI_OPEN=1; shift ;;
+      --idle)                UI_IDLE="${2:?--idle needs minutes}"; shift 2 ;;
+      --stop)                UI_STOP=1; shift ;;
+      --ui)                  UI_AUTO=1; shift ;;
       trend)                 STAGE="trend"; shift; if [[ "${1:-}" =~ ^[0-9]+$ ]]; then TREND_ROWS="$1"; shift; fi ;;
       --repo)                REPO_ARG="${2:?--repo needs a path}"; shift 2 ;;
       --profile)             PROFILE_OVERRIDE="${2:?--profile needs a name}"; shift 2 ;;
@@ -117,12 +123,6 @@ main() {
     init_all "$INIT_WEB"
     exit "$EXIT_PASS"
   fi
-  if [[ "$STAGE" == "ui" ]]; then
-    ensure_dir "$REPO_PATH/qa-report/_logs"
-    ui_run
-    exit $?
-  fi
-
   load_config
   detect_stack "$(cfg_get ".stack")"
   resolve_profile
@@ -134,6 +134,13 @@ main() {
   waivers_load
   git_base_ref "$(cfg_get ".git.base")"
 
+  # Why after load_config: the page reads report.dir and report.uiIdleMinutes from the repo's configuration.
+  if [[ "$STAGE" == "ui" ]]; then
+    ensure_dir "$(ui_report_dir)"
+    if (( UI_STOP )); then ui_stop; exit $?; fi
+    ui_run
+    exit $?
+  fi
   if [[ "$STAGE" == "update" ]]; then
     update_pin
     exit $?
@@ -148,6 +155,7 @@ main() {
     suggest_run; exit $?
   fi
 
+  ui_autostart
   if [[ "$STAGE" == "all" ]]; then
     if stage_all; then exit "$EXIT_PASS"; fi
     exit "$EXIT_FAIL"
