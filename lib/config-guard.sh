@@ -3,7 +3,8 @@
 # Why: an agent that lowers a threshold to make the gate pass must be caught at review time.
 # Sourced by qa-gate.sh.
 
-GATE_CONFIG_FILES=(qa-gate.config.json .semgrepignore .trivyignore)
+# The ai-eval manifest is gate configuration: it pins which case counts as safety (lib/ai-eval.sh).
+GATE_CONFIG_FILES=(qa-gate.config.json .semgrepignore .trivyignore qa-report/ai-eval-manifest.json)
 readonly GATE_CONFIG_SEPARATOR="--- qa-gate file boundary ---"
 
 # Concatenates the guarded files from the working tree (missing file = empty).

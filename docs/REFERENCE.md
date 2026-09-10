@@ -23,7 +23,7 @@ qa-gate.sh suggest                AI proposes qa-gate.config.json (never overwri
 --profile <name>         run as this profile (overrides the config and DEPLOY_PROFILE; must exist in profiles)
 --only <id,id,...>       run only these check ids
 --allow-config-change    gate-config differing from the base branch is WARN instead of FAIL
---no-docker              Docker-based checks are SKIP instead of FAIL (never in CI)
+--no-docker              Docker-based checks are SKIP instead of FAIL (never in CI); the verdict line itself says so
 --verbose                also stream the log to stderr
 --json-only              print only the JSON verdict path
 --base-url <url>         staging/compliance against a LIVE site: nothing is started or stopped, evidence marked live
@@ -53,6 +53,10 @@ compliance in live mode); it never deploys — that stays a human order run on t
 | pr | `ai-eval-safety` | yes | the project's own AI evidence (`qa-report/ai-eval-latest.json`, `schemas/ai-eval.schema.json`): every `safety` and `security` case must pass. **Not waivable.** No AI SDK → SKIP; no evidence → SKIP on sandbox/portfolio-demo, WARN on mvp-client, FAIL on production |
 | pr | `ai-eval-quality` | yes | a `quality` case that passed in `qa-report/ai-eval-ratchet.json` and now fails → FAIL; a case dropped from the set or a new one not passing yet → WARN. The percentage is reported for the trend and never gated on: a set that grows by one hard case lowers it while nothing got worse |
 | pr | `ai-eval-fresh` | yes | evidence older than the newest commit touching `ai.promptGlobs` → FAIL (WARN on portfolio-demo). The prompt moved and nobody measured again |
+| pr | `ai-model-pin` | yes | a model-id literal without a dated snapshot (heuristic over tracked sources). WARN; FAIL in `production`; SKIP in `sandbox` |
+| pr | `ai-call-guards` | yes | a model call without a token cap or timeout within its argument window (LLM10). WARN; FAIL from `mvp-client` |
+| pr | `ai-prompt-hygiene` | yes | a prompt template that interpolates input and shows no delimiter convention (`<user>`, `"""`, `<<<`, `[INPUT]`) anywhere in the file (LLM01). WARN; FAIL in `production` |
+| pr | `ai-pii-prompt` | yes | PII-named fields interpolated into a prompt template must be named in `docs/AI-ACT-REGISTER.md`. WARN; FAIL in `production`. Findings for all four: `qa-report/ai-code.json` |
 | pr | `gate-workflow` | no | `.github/workflows/qa-gate.yml` against the installed `templates/ci.yml`: same pinned gate commit → PASS; different, or not using the published Action → WARN naming `qa-gate.sh update`; missing with a git remote → WARN on mvp-client/production, SKIP below; no remote → SKIP |
 | pr | `gate-config` | yes | `qa-gate.config.json`, `.semgrepignore`, `.trivyignore` hashed against the base branch; a change is FAIL (WARN with `--allow-config-change`) |
 | build | `docker-build` | yes | `docker build` of the first Dockerfile (`build.dockerfile`, `./Dockerfile`, `apps/*/Dockerfile`) |
@@ -71,6 +75,12 @@ With several stacks in one repo, per-stack ids read `typecheck@go`, `unit@python
 A Docker-based check with Docker stopped is FAIL (reason in the summary); `--no-docker` turns it into SKIP.
 A blocking FAIL with a valid entry in `waivers` becomes WARN (see Accepting a risk without hiding it below); the JSON keeps the finding
 under `waiver`.
+
+`ai-eval-safety` also enforces the **case manifest** (`qa-report/ai-eval-manifest.json`, written by
+`qa-gate.sh ai-manifest`, committed, on the gate-config guard list): a case whose category differs from the
+manifest or a safety/security case missing from the evidence → FAIL — re-tagging or deleting the hard case is the
+one way to dodge the non-waivable check, so the taxonomy lives on the base branch. A case the manifest does not
+know yet → WARN with the remedy; no manifest at all → WARN (`production`: FAIL).
 
 ## Summary block (stdout)
 
@@ -111,7 +121,7 @@ A waived check carries `"status": "WARN"` and `"waiver": { "check", "until", "by
 |---|---|---|
 | `gateVersion` | written by `init` | the gate version this repo expects; `qa-gate.sh update` moves it; checked by `gate-version` |
 | `profile` / `profiles` | `auto` / four presets | profiles in the README; `auto` reads `DEPLOY_PROFILE` from the env files; `--profile` overrides both |
-| `waivers` | `[]` | accepted risks `{ check, until, reason, by }`: FAIL → WARN until the date; `by` required from `mvp-client`, `reason` in `production`; `check` is a check id (`trivy-fs`, `coverage`, …) or a legal rule id (`vsbg.odr-link`) |
+| `waivers` | `[]` | accepted risks `{ check, until, reason, by }`: FAIL → WARN until the date; `by` required from `mvp-client`, `reason` in `production`; `check` is a check id (`trivy-fs`, `coverage`, …) or a legal rule id (`vsbg.odr-link`). **`secrets` waivers need `by` + `reason` at every profile and at most 30 days** — a leaked credential is never a quarterly risk |
 | `stack` | `"auto"` | `node` · `go` · `python` · `["node","go"]`; auto detects from package.json / go.mod / pyproject.toml |
 | `git.base` | `"auto"` | base branch for `gate-config` and the secrets diff: `main`, else `master` |
 | `commands.node.*` | `"auto"` | `auto` = package.json script of the same name (`typecheck`, `lint`, `test`, `test:coverage`, `test:integration`, `test:e2e`) at the root, else `pnpm -r run <script>` when a pnpm workspace package (`apps/*`, `packages/*`) defines it |

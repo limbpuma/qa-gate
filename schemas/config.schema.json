@@ -538,6 +538,10 @@
       "type": "object",
       "description": "How this repo's own AI code is checked. Distinct from legal.ai, which is what the website tells its visitors (KI-VO Art. 50).",
       "properties": {
+        "manifestFile": {
+          "type": "string",
+          "description": "Committed pin of every eval case's id+category (default qa-report/ai-eval-manifest.json). Guarded by gate-config: re-tagging a safety case is a base-branch decision, never a quiet edit. Write it with qa-gate.sh ai-manifest."
+        },
         "promptGlobs": {
           "type": "array",
           "items": {

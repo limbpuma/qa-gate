@@ -109,7 +109,7 @@ init_gitignore() {
   local line added=0
   [[ -f "$dest" ]] || : > "$dest"
   # Why: verdicts and tool reports are regenerated on every run; only the ratchet and the evidence bundles are history.
-  for line in "qa-report/_logs/" "qa-report/_lighthouse/" "qa-report/*.json" "qa-report/*.jsonl" "qa-report/*.sarif" "!qa-report/coverage-ratchet.json" "!qa-report/ai-eval-latest.json" "!qa-report/ai-eval-ratchet.json"; do
+  for line in "qa-report/_logs/" "qa-report/_lighthouse/" "qa-report/*.json" "qa-report/*.jsonl" "qa-report/*.sarif" "!qa-report/coverage-ratchet.json" "!qa-report/ai-eval-latest.json" "!qa-report/ai-eval-ratchet.json" "!qa-report/ai-eval-manifest.json"; do
     if grep -qF "$line" "$dest"; then continue; fi
     printf '%s\n' "$line" >> "$dest"
     added=1

@@ -378,18 +378,33 @@ test_waivers() {
   run_gate "$dest" init >/dev/null || { fail "$label" "init failed"; return; }
   token=$(plant_secret_file "$dest")
   # A valid waiver turns the blocking FAIL into a WARN that names the owner and the date; the stage passes.
-  cfg_set "$cfg" 'j.waivers = [{ check: "secrets", until: "2099-01-01", reason: "fixture token", by: "tests" }]'
+  # secrets waivers are capped at 30 days (a leaked credential is never a quarterly risk), so the date is near.
+  local soon
+  soon=$(date -d '+20 days' +%Y-%m-%d 2>/dev/null || date -v+20d +%Y-%m-%d)
+  cfg_set "$cfg" "j.waivers = [{ check: \"secrets\", until: \"$soon\", reason: \"fixture token\", by: \"tests\" }]"
   out=$(run_gate "$dest" pre-commit --only secrets) || { fail "$label" "valid waiver did not turn FAIL into WARN · $(head -3 <<< "$out")"; return; }
-  grep -qE '^WARN[[:space:]]+secrets[[:space:]]+waived until 2099-01-01 by tests' <<< "$out" || { fail "$label" "waiver line missing · $(grep secrets <<< "$out")"; return; }
+  grep -qE "^WARN[[:space:]]+secrets[[:space:]]+waived until $soon by tests" <<< "$out" || { fail "$label" "waiver line missing · $(grep secrets <<< "$out")"; return; }
   grep -q '"waiver"' "$dest/qa-report/gate-pre-commit-latest.json" || { fail "$label" "waiver not recorded in the JSON verdict"; return; }
   # Expired: not honoured, and the FAIL line says so.
   cfg_set "$cfg" 'j.waivers[0].until = "2020-01-01"'
   out=$(run_gate "$dest" pre-commit --only secrets) && { fail "$label" "expired waiver still honoured"; return; }
   grep -qE '^FAIL[[:space:]]+secrets[[:space:]]+waiver expired 2020-01-01' <<< "$out" || { fail "$label" "expiry reason missing · $(grep secrets <<< "$out")"; return; }
-  # mvp-client: a waiver without an owner is not honoured.
+  # secrets past the 30-day cap is rejected even with owner and reason.
+  cfg_set "$cfg" 'j.waivers = [{ check: "secrets", until: "2099-01-01", reason: "fixture token", by: "tests" }]'
+  out=$(run_gate "$dest" pre-commit --only secrets) && { fail "$label" "secrets waiver beyond the cap honoured"; return; }
+  grep -q 'waiver secrets capped at 30 days' <<< "$out" || { fail "$label" "cap reason missing · $(grep secrets <<< "$out")"; return; }
+  # secrets without an owner is rejected at EVERY profile, not only from mvp-client.
+  cfg_set "$cfg" "j.waivers = [{ check: \"secrets\", until: \"$soon\", reason: \"fixture token\" }]"
+  out=$(run_gate "$dest" pre-commit --only secrets) && { fail "$label" "secrets waiver without by honoured on a demo"; return; }
+  grep -q 'waiver secrets needs "by" at every profile' <<< "$out" || { fail "$label" "by-required reason missing · $(grep secrets <<< "$out")"; return; }
+  # mvp-client: a waiver without an owner is not honoured. For secrets the stricter every-profile rule speaks.
   cfg_set "$cfg" 'j.profile = "mvp-client"; j.waivers = [{ check: "secrets", until: "2099-01-01", reason: "fixture token" }]'
   out=$(run_gate "$dest" pre-commit --only secrets) && { fail "$label" "waiver without by honoured in mvp-client"; return; }
-  grep -q 'needs "by" in profile mvp-client' <<< "$out" || { fail "$label" "missing-by reason absent · $(grep secrets <<< "$out")"; return; }
+  grep -q 'waiver secrets needs "by" at every profile' <<< "$out" || { fail "$label" "missing-by reason absent · $(grep secrets <<< "$out")"; return; }
+  # The generic per-profile rule still guards every other check (secrets shadows it above).
+  printf '{"waivers":[{"check":"coverage","until":"2099-01-01","reason":"x"}]}' > "$dest/wv.json"
+  # The JSON stream escapes the inner quotes, so the assertion matches around them.
+  node "$QA_GATE_HOME/lib/waivers.js" "$dest/wv.json" mvp-client | grep -q 'waiver coverage needs .*by.* in profile mvp-client' || { fail "$label" "generic mvp-client by-rule gone"; return; }
   # Inline allow with a reason: the hit is counted as allowed, not as a finding; without a reason it still blocks.
   cfg_set "$cfg" 'j.waivers = []'
   printf 'GITHUB_TOKEN=%s # qa-gate:allow fixture token for the self-tests\n' "$token" > "$dest/leaked.txt"
@@ -698,11 +713,37 @@ test_ai_eval() {
   # Evidence, everything passing: all three green and the ratchet remembers the ids.
   write_ai_eval "$ev" "$(date +%Y-%m-%dT%H:%M:%S%z)" \
     '{"id":"allergy-gluten","category":"safety","status":"pass"},{"id":"injection-ignore","category":"security","status":"pass"},{"id":"pizza-with-tomato","category":"quality","status":"pass"},{"id":"something-spicy","category":"quality","status":"pass"}'
+  # Without a manifest the safety check cannot trust the taxonomy: WARN with the remedy, FAIL in production.
+  out=$(run_gate "$dest" pr --no-docker --only ai-eval-safety) || { fail "$label" "missing manifest must not block a demo"; return; }
+  grep -qE '^WARN[[:space:]]+ai-eval-safety[[:space:]]+no case manifest' <<< "$out" || { fail "$label" "missing-manifest WARN wrong · $(grep ai-eval-safety <<< "$out")"; return; }
+  out=$(run_gate "$dest" pr --no-docker --only ai-eval-safety --profile production) && { fail "$label" "production without manifest did not FAIL"; return; }
+  (cd "$dest" && bash "$QA_GATE_SH" ai-manifest >/dev/null) || { fail "$label" "ai-manifest subcommand failed"; return; }
+  grep -q '"allergy-gluten"' "$dest/qa-report/ai-eval-manifest.json" || { fail "$label" "manifest lacks the safety case"; return; }
   out=$(run_gate "$dest" pr --no-docker --only ai-eval-safety,ai-eval-quality,ai-eval-fresh) || { fail "$label" "clean evidence not green · $(grep ai-eval <<< "$out")"; return; }
   grep -qE '^PASS[[:space:]]+ai-eval-safety[[:space:]]+1 safety \+ 1 security' <<< "$out" || { fail "$label" "safety line wrong · $(grep ai-eval-safety <<< "$out")"; return; }
   grep -qE '^PASS[[:space:]]+ai-eval-quality[[:space:]]+quality 100%' <<< "$out" || { fail "$label" "quality line wrong · $(grep ai-eval-quality <<< "$out")"; return; }
   grep -qE '^PASS[[:space:]]+ai-eval-fresh' <<< "$out" || { fail "$label" "fresh not PASS · $(grep fresh <<< "$out")"; return; }
   grep -q 'pizza-with-tomato' "$dest/qa-report/ai-eval-ratchet.json" || { fail "$label" "ratchet did not record the passing ids"; return; }
+
+  # Re-tagging the safety case as quality would dodge the non-waivable check; the manifest pins the category.
+  write_ai_eval "$ev" "$(date +%Y-%m-%dT%H:%M:%S%z)" \
+    '{"id":"allergy-gluten","category":"quality","status":"pass"},{"id":"injection-ignore","category":"security","status":"pass"},{"id":"pizza-with-tomato","category":"quality","status":"pass"},{"id":"something-spicy","category":"quality","status":"pass"}'
+  out=$(run_gate "$dest" pr --no-docker --only ai-eval-safety) && { fail "$label" "a re-tagged safety case did not block"; return; }
+  grep -qE '^FAIL[[:space:]]+ai-eval-safety[[:space:]]+case category differs' <<< "$out" || { fail "$label" "retag not named · $(grep ai-eval-safety <<< "$out")"; return; }
+  # Deleting the safety case from the evidence is the other dodge: the manifest still names it.
+  write_ai_eval "$ev" "$(date +%Y-%m-%dT%H:%M:%S%z)" \
+    '{"id":"injection-ignore","category":"security","status":"pass"},{"id":"pizza-with-tomato","category":"quality","status":"pass"},{"id":"something-spicy","category":"quality","status":"pass"}'
+  out=$(run_gate "$dest" pr --no-docker --only ai-eval-safety) && { fail "$label" "a vanished safety case did not block"; return; }
+  grep -q 'missing from the evidence: allergy-gluten' "$dest/qa-report/gate-pr-latest.json" || { fail "$label" "vanished case not named in the report"; return; }
+  # A brand-new case the manifest does not know yet is a WARN with the remedy, never a block.
+  write_ai_eval "$ev" "$(date +%Y-%m-%dT%H:%M:%S%z)" \
+    '{"id":"allergy-gluten","category":"safety","status":"pass"},{"id":"injection-ignore","category":"security","status":"pass"},{"id":"pizza-with-tomato","category":"quality","status":"pass"},{"id":"something-spicy","category":"quality","status":"pass"},{"id":"allergy-lactose","category":"safety","status":"pass"}'
+  out=$(run_gate "$dest" pr --no-docker --only ai-eval-safety) || { fail "$label" "an unregistered case must not block"; return; }
+  grep -qE '^WARN[[:space:]]+ai-eval-safety[[:space:]]+case\(s\) not in the manifest' <<< "$out" || { fail "$label" "unregistered WARN wrong · $(grep ai-eval-safety <<< "$out")"; return; }
+  (cd "$dest" && bash "$QA_GATE_SH" ai-manifest >/dev/null) || { fail "$label" "re-pinning the manifest failed"; return; }
+  write_ai_eval "$ev" "$(date +%Y-%m-%dT%H:%M:%S%z)" \
+    '{"id":"allergy-gluten","category":"safety","status":"pass"},{"id":"injection-ignore","category":"security","status":"pass"},{"id":"pizza-with-tomato","category":"quality","status":"pass"},{"id":"something-spicy","category":"quality","status":"pass"}'
+  (cd "$dest" && bash "$QA_GATE_SH" ai-manifest >/dev/null)
 
   # A failing safety case blocks, and no waiver can wave it through.
   write_ai_eval "$ev" "$(date +%Y-%m-%dT%H:%M:%S%z)" \
@@ -745,6 +786,77 @@ test_ai_eval() {
   pass "$label"
 }
 
+test_ai_code() {
+  local label="T32.ai-code" dest out
+  dest=$(prep_fixture_repo node)
+  cfg_set "$dest/package.json" 'j.dependencies = { openai: "^4.0.0" }'
+  run_gate "$dest" init >/dev/null || { fail "$label" "init failed"; return; }
+  mkdir -p "$dest/src"
+  # One file that violates all four heuristics: unpinned model, unguarded call, undelimited + PII interpolation.
+  cat > "$dest/src/client.ts" <<'CLIENT'
+const r = await client.chat.completions.create({
+  model: "gpt-4o",
+  messages,
+});
+CLIENT
+  cat > "$dest/src/prompt.ts" <<'PROMPT'
+export const p = `Order for ${userName}, email ${email}`;
+PROMPT
+  (cd "$dest" && git_quiet add -A && git_commit_quiet -m "ai code")
+  local checks="ai-model-pin,ai-call-guards,ai-prompt-hygiene,ai-pii-prompt"
+  # portfolio-demo: everything is a WARN — adoption is never brutal.
+  out=$(run_gate "$dest" pr --no-docker --only "$checks") || { fail "$label" "demo findings must not block · $(head -3 <<< "$out")"; return; }
+  for id in ai-model-pin ai-call-guards ai-prompt-hygiene ai-pii-prompt; do
+    grep -qE "^WARN[[:space:]]+$id" <<< "$out" || { fail "$label" "$id not WARN on demo · $(grep "$id" <<< "$out")"; return; }
+  done
+  grep -q 'src/client.ts:2' "$dest/qa-report/ai-code.json" || { fail "$label" "findings report lacks file:line"; return; }
+  # mvp-client: an unbounded model call is a bill and an outage — ai-call-guards blocks, the rest still WARN.
+  out=$(run_gate "$dest" pr --no-docker --only "$checks" --profile mvp-client) && { fail "$label" "mvp-client did not block on call guards"; return; }
+  grep -qE '^FAIL[[:space:]]+ai-call-guards' <<< "$out" || { fail "$label" "call-guards not FAIL on mvp · $(grep ai-call <<< "$out")"; return; }
+  grep -qE '^WARN[[:space:]]+ai-model-pin' <<< "$out" || { fail "$label" "model-pin not WARN on mvp · $(grep model-pin <<< "$out")"; return; }
+  # production: all four block.
+  out=$(run_gate "$dest" pr --no-docker --only "$checks" --profile production) && { fail "$label" "production did not block"; return; }
+  grep -qE '^FAIL[[:space:]]+ai-pii-prompt' <<< "$out" || { fail "$label" "pii not FAIL on production · $(grep pii <<< "$out")"; return; }
+  # sandbox: none of this concerns a scratch project.
+  out=$(run_gate "$dest" pr --no-docker --only "$checks" --profile sandbox) || { fail "$label" "sandbox exited $?"; return; }
+  grep -qE '^SKIP[[:space:]]+ai-model-pin[[:space:]]+profile sandbox' <<< "$out" || { fail "$label" "sandbox not SKIP · $(grep model-pin <<< "$out")"; return; }
+  # The clean shape passes everywhere: pinned model, capped + timed call, delimited prompt, PII declared.
+  cat > "$dest/src/client.ts" <<'CLIENT'
+const r = await client.chat.completions.create({
+  model: "gpt-4o-2024-08-06",
+  messages,
+  max_tokens: 800,
+  timeout: 30000,
+});
+CLIENT
+  cat > "$dest/src/prompt.ts" <<'PROMPT'
+// The <user> tags bound what the input may pretend to be.
+export const p = `Order:\n<user>${userInput}</user>, contact <user>${email}</user>`;
+PROMPT
+  printf '\nVerarbeitete Felder: email (Bestellkontakt).\n' >> "$dest/docs/AI-ACT-REGISTER.md"
+  (cd "$dest" && git_quiet add -A && git_commit_quiet -m "guarded")
+  out=$(run_gate "$dest" pr --no-docker --only "$checks" --profile production) || { fail "$label" "clean AI code not green · $(grep -E 'ai-(model|call|prompt|pii)' <<< "$out")"; return; }
+  pass "$label"
+}
+
+test_verdict_surface() {
+  local label="T33.verdict-surface" dest out
+  dest=$(prep_fixture_repo node)
+  run_gate "$dest" init >/dev/null || { fail "$label" "init failed"; return; }
+  # --no-docker must be readable on the verdict line itself, not only in SKIP rows people skip.
+  out=$(run_gate "$dest" pre-commit --no-docker --only typecheck) || { fail "$label" "pre-commit exited $?"; return; }
+  head -1 <<< "$out" | grep -q 'no-docker (docker checks skipped)' || { fail "$label" "header lacks the no-docker marker · $(head -1 <<< "$out")"; return; }
+  grep -q '"noDocker": true' "$dest/qa-report/gate-pre-commit-latest.json" || { fail "$label" "JSON verdict lacks noDocker"; return; }
+  out=$(run_gate "$dest" pre-commit --only secrets,typecheck) || true
+  head -1 <<< "$out" | grep -q 'no-docker' && { fail "$label" "marker present without the flag"; return; }
+  # legal-watch normalisation: a multi-line script body must not reach the change hash.
+  local text
+  text=$(printf '<html><script>\nvar chrome="churn-1";\n</script><body><p>Impressumspflicht nach &sect; 5</p></body>' | node "$QA_GATE_HOME/lib/web/legal/extract-text.js")
+  [[ "$text" == *Impressumspflicht* ]] || { fail "$label" "visible text lost by extract-text"; return; }
+  [[ "$text" == *churn* ]] && { fail "$label" "script body survived into the extraction"; return; }
+  pass "$label"
+}
+
 # --- Runner ----------------------------------------------------------------
 ensure_node_fixture_deps
 for fixture in node go python; do test_pre_commit_passes "$fixture"; done
@@ -774,6 +886,8 @@ test_e2e_and_nuclei
 test_integration_update
 test_ui_server
 test_ui_autostart
+test_ai_code
+test_verdict_surface
 if node "$SCRIPT_DIR/../scripts/validate-packs.mjs" >/dev/null 2>&1; then pass "T15.packs-valid"; else fail "T15.packs-valid" "$(node "$SCRIPT_DIR/../scripts/validate-packs.mjs" 2>&1 | grep -A3 FAIL | head -6)"; fi
 # Every legal rule has a fixture pair, and each pair proves the rule (pass.html → PASS, fail.html → FAIL/WARN).
 if out=$(node "$SCRIPT_DIR/../scripts/validate-rules.mjs" 2>&1); then pass "T21.rules-have-fixtures"; else fail "T21.rules-have-fixtures" "$(head -4 <<< "$out")"; fi

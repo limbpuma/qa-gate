@@ -112,6 +112,10 @@ stage_pr() {
   run_single_check ai-eval-safety true ai_eval_safety_check
   run_single_check ai-eval-quality true ai_eval_quality_check
   run_single_check ai-eval-fresh true ai_eval_fresh_check
+  run_single_check ai-model-pin true ai_model_pin_check
+  run_single_check ai-call-guards true ai_call_guards_check
+  run_single_check ai-prompt-hygiene true ai_prompt_hygiene_check
+  run_single_check ai-pii-prompt true ai_pii_prompt_check
   run_single_check spec false spec_check
   run_single_check gate-workflow false gate_workflow_check
   run_single_check gate-config true gate_config_check

@@ -27,8 +27,12 @@ print_check_line() {
 print_summary() {
   local count=${#CHECK_RESULTS[@]} pass_count=0 collapsed=0
   local record id status duration text
-  printf 'QA-GATE %s · %s · %s · %s · %ss · %s\n' \
-    "$STAGE" "$(basename "$REPO_PATH")" "$PROFILE" "${STAGE_STARTED_AT:0:16}" "$STAGE_DURATION" "$(stage_verdict)"
+  # Why on the verdict line and not only in the SKIP rows: humans and LLMs skip SKIP lines, and a PASS with
+  # the security scans silently absent must not read like a full PASS (v0.13 design review).
+  local nd=""
+  (( NO_DOCKER )) && nd=" · no-docker (docker checks skipped)"
+  printf 'QA-GATE %s · %s · %s · %s · %ss · %s%s\n' \
+    "$STAGE" "$(basename "$REPO_PATH")" "$PROFILE" "${STAGE_STARTED_AT:0:16}" "$STAGE_DURATION" "$(stage_verdict)" "$nd"
 
   for record in "${CHECK_RESULTS[@]}"; do
     IFS='|' read -r _ status _ _ _ _ <<< "$record"
@@ -70,6 +74,7 @@ write_verdict() {
   QG_STAGE="$STAGE" QG_REPO="$(basename "$REPO_PATH")" QG_STACK="$STACK_LIST" QG_PROFILE="$PROFILE" \
   QG_VERDICT="$(stage_verdict)" QG_STARTED="$STAGE_STARTED_AT" QG_DURATION="$STAGE_DURATION" \
   QG_HASH="$CONFIG_HASH" QG_GATE_VERSION="$(installed_version)" QG_BASE="$BASE_REF" QG_LOG="$(relative_to_repo "$LOG_FILE")" \
+  QG_NO_DOCKER="$NO_DOCKER" \
   node "$LIB_DIR/json.js" build-verdict <<< "$records" > "$JSON_FILE"
   cp "$JSON_FILE" "$JSON_FILE_LATEST"
 }

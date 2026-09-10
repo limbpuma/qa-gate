@@ -20,8 +20,9 @@ while IFS=$'\t' read -r id source; do
   checked=$((checked + 1))
   body=$(curl -sL --max-time "$FETCH_TIMEOUT_SEC" -A "$USER_AGENT" "$source" 2>/dev/null || true)
   if [[ -z "$body" ]]; then unreachable=$((unreachable + 1)); echo "UNREACHABLE $id $source"; continue; fi
-  # Normalise: drop scripts/styles/tags, collapse whitespace — layout changes must not count as law changes.
-  text=$(printf '%s' "$body" | sed -E 's#<script[^>]*>.*?</script>##g; s#<style[^>]*>.*?</style>##g; s#<[^>]+># #g' | tr -s '[:space:]' ' ')
+  # Normalise in node — sed has no non-greedy match and no multi-line, so script bodies survived into the
+  # hash and CMS chrome churn looked like a law change (extract-text.js carries the why).
+  text=$(printf '%s' "$body" | node "$QA_GATE_HOME/lib/web/legal/extract-text.js")
   hash=$(printf '%s' "$text" | sha256sum | awk '{print $1}')
   snap="$STATE/snapshots/$id"
   if [[ -f "$snap.sha" ]] && [[ "$(cat "$snap.sha")" == "$hash" ]]; then continue; fi

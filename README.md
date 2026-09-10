@@ -134,7 +134,11 @@ you produce — `qa-report/ai-eval-latest.json` ([schema](schemas/ai-eval.schema
 like: vitest, promptfoo, a script. **Cases, not percentages**: every case has an id, so the gate can enforce the one
 rule an average hides — a case that used to pass may not start failing. `safety` and `security` cases must all pass
 and cannot be waived; `quality` cases may not regress; evidence older than the prompt it measured is stale and
-blocks. Without an AI SDK in the repo, all of it is SKIP.
+blocks. The committed **case manifest** (`qa-gate.sh ai-manifest`) pins each case's category, so re-tagging a
+safety case as quality — the one way to dodge the non-waivable check — is a visible base-branch decision, never a
+quiet edit. Four static heuristics complete the picture: `ai-model-pin` (dated snapshots), `ai-call-guards` (token
+cap + timeout on every call), `ai-prompt-hygiene` (delimited input) and `ai-pii-prompt` (PII in prompts is declared
+in the AI-ACT register). Without an AI SDK in the repo, all of it is SKIP.
 
 ## Read more
 

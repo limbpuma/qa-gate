@@ -10,7 +10,7 @@ readonly QA_GATE_HOME
 readonly LIB_DIR="$QA_GATE_HOME/lib"
 readonly TPL_DIR="$QA_GATE_HOME/templates"
 
-for lib in common detect secrets audit config-guard waivers version semgrep trivy stack-node stack-go stack-python ai-register ai-eval spec deploy summary init suggest ui; do
+for lib in common detect secrets audit config-guard waivers version semgrep trivy stack-node stack-go stack-python ai-register ai-eval ai-code spec deploy summary init suggest ui; do
   # shellcheck disable=SC1090
   source "$LIB_DIR/$lib.sh"
 done
@@ -52,6 +52,7 @@ Options:
   --profile <name>         run as this profile (overrides qa-gate.config.json and DEPLOY_PROFILE)
   --ui                     start the report page in the background before the stage runs and print its URL
                            (never from the pre-commit hook or in CI; report.autoUi does the same permanently)
+  ai-manifest              pin the current ai-eval case set (id + category) — commit the file it writes
   --only <id,id,...>       run only these check ids
   --allow-config-change    gate-config differing from the base branch is WARN, not FAIL
   --no-docker              Docker-based checks are SKIP instead of FAIL
@@ -80,7 +81,7 @@ JSON_ONLY=0
 parse_args() {
   while (( $# > 0 )); do
     case "$1" in
-      init|update|suggest|ui|pre-commit|pr|build|staging|compliance|deploy|all) STAGE="$1"; shift ;;
+      init|update|suggest|ui|ai-manifest|pre-commit|pr|build|staging|compliance|deploy|all) STAGE="$1"; shift ;;
       --port)                UI_PORT="${2:?--port needs a number}"; shift 2 ;;
       --strict-port)         UI_STRICT=1; shift ;;
       --ci)                  UPDATE_CI=1; shift ;;
@@ -149,6 +150,11 @@ main() {
   if [[ "$STAGE" == "update" ]]; then
     update_repo
     exit $?
+  fi
+  if [[ "$STAGE" == "ai-manifest" ]]; then
+    manifest_out=$(node "$LIB_DIR/ai-eval.js" manifest-write "$REPO_PATH" "$CONFIG_JSON") || exit "$EXIT_FAIL"
+    printf 'manifest written: %s — commit it on the base branch (it is on the gate-config guard list)\n' "$manifest_out"
+    exit "$EXIT_PASS"
   fi
   if [[ "$STAGE" == "trend" ]]; then
     REPORT_DIR=$(cfg_get ".report.dir"); REPORT_DIR="${REPORT_DIR:-qa-report}"

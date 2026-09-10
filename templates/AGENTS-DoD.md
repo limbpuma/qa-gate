@@ -10,7 +10,10 @@ Required local steps before pushing or opening a PR:
 4. `bash scripts/qa-gate.sh build` — must PASS before tagging a release.
 5. Never lower a threshold, skip a check or edit `qa-gate.config.json` to make the gate pass — `gate-config` flags it.
    An accepted risk goes into `waivers` in `qa-gate.config.json` (`check`, `until` date, `reason`, `by`): it turns
-   that FAIL into a WARN until the date and is reviewed like any other config change.
+   that FAIL into a WARN until the date and is reviewed like any other config change. A `secrets` waiver needs
+   `by` + `reason` at every profile and at most 30 days. The AI eval taxonomy is pinned the same way: when
+   `ai-eval-safety` asks for the case manifest, run `bash scripts/qa-gate.sh ai-manifest` and commit the file on
+   the base branch — never re-tag or delete a safety case to get green.
 6. **`gate-version` or `gate-workflow` not PASS → run `bash scripts/qa-gate.sh update` and commit the result on the
    base branch.** That one command pins the gate version this repo expects, refreshes the CI workflow to the same
    version and updates this block. Never edit `gateVersion` or the workflow by hand. Add CI to a repo that has none

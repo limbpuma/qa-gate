@@ -41,6 +41,22 @@ ai_eval_safety_check() {
   R_REPORT="$report"
   R_COUNT_JSON=$(node -e 'const j=JSON.parse(process.argv[1]);const c=j.counts;process.stdout.write(JSON.stringify({safety:c.safety,security:c.security}))' "$AI_EVAL_JSON")
   if [[ -n "$blocking" ]]; then mark_fail "failing safety/security case(s): $blocking → $report"; return 0; fi
+  # The committed manifest pins id+category (guarded by gate-config): without it, re-tagging a safety case as
+  # quality would make the one non-waivable check waivable. Taxonomy changes belong on the base branch.
+  if [[ "$(ai_eval_field manifest.found)" != "true" ]]; then
+    local mfile msg
+    mfile=$(ai_eval_field manifest.file)
+    msg="no case manifest at $mfile — run qa-gate.sh ai-manifest and commit it on the base branch"
+    if [[ "$PROFILE" == "production" ]]; then mark_fail "$msg"; else mark_warn "$msg"; fi
+    return 0
+  fi
+  local retagged missing unregistered
+  retagged=$(ai_eval_field manifest.retagged)
+  missing=$(ai_eval_field manifest.missingBlocking)
+  unregistered=$(ai_eval_field manifest.unregistered)
+  if [[ -n "$retagged" ]]; then mark_fail "case category differs from manifest: $retagged — taxonomy changes belong on the base branch"; return 0; fi
+  if [[ -n "$missing" ]]; then mark_fail "safety/security case(s) in the manifest missing from the evidence: $missing"; return 0; fi
+  if [[ -n "$unregistered" ]]; then mark_warn "case(s) not in the manifest: $unregistered — register them (qa-gate.sh ai-manifest) on the base branch"; return 0; fi
   mark_pass "$(ai_eval_field counts.safety.pass) safety + $(ai_eval_field counts.security.pass) security case(s) pass ($(ai_eval_field model))"
 }
 
