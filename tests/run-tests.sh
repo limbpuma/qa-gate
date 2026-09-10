@@ -73,6 +73,11 @@ cfg_set() {
 
 installed_gate_version() { tr -d '[:space:]' < "$QA_GATE_HOME/VERSION"; }
 
+# write_ai_eval <file> <generatedAt> <cases json without the brackets>
+write_ai_eval() {
+  printf '{ "schema": 1, "generatedAt": "%s", "runner": "tests", "model": "test-model-20260101", "promptFiles": ["src/prompt.ts"], "cases": [%s] }\n' "$2" "$3" > "$1"
+}
+
 # stop_pid <windows or posix pid>: bash's kill cannot reach a native node process on MSYS; taskkill can.
 stop_pid() {
   [[ -n "$1" ]] || return 0
@@ -304,7 +309,9 @@ test_env_without_profile_and_no_dockerfile() {
   printf 'DEPLOY_PROFILE=mvp-client\n' >> "$dest/.env"
   out=$(run_gate "$dest" pr --no-docker --only typecheck) || { fail "$label" "gate died with DEPLOY_PROFILE set"; return; }
   grep -q '· mvp-client ·' <<< "$out" || { fail "$label" "DEPLOY_PROFILE not honoured · $(head -1 <<< "$out")"; return; }
-  # build without a Dockerfile must SKIP, not abort (resolve_dockerfile runs outside run_check).
+  # build without a Dockerfile must SKIP, not abort (resolve_dockerfile runs outside run_check). The fixture ships
+  # one for T29, so this case has to remove it to be about what it says it is about.
+  rm -f "$dest/Dockerfile"
   out=$(run_gate "$dest" build) || { fail "$label" "build without Dockerfile exited $?"; return; }
   grep -qE '^SKIP[[:space:]]+docker-build' <<< "$out" || { fail "$label" "docker-build not SKIP · $(head -3 <<< "$out")"; return; }
   pass "$label"
@@ -591,6 +598,153 @@ test_ui_autostart() {
   pass "$label"
 }
 
+test_integration_update() {
+  local label="T28.integration" dest out
+  dest=$(prep_fixture_repo node)
+  (cd "$dest" && git_quiet remote add origin https://example.invalid/x.git)
+  run_gate "$dest" init >/dev/null || { fail "$label" "init failed"; return; }
+  # No workflow: a prototype is only told about it, a client project is warned.
+  out=$(run_gate "$dest" pr --no-docker --only gate-workflow) || { fail "$label" "gate-workflow must not block"; return; }
+  grep -qE '^SKIP[[:space:]]+gate-workflow[[:space:]]+no \.github' <<< "$out" || { fail "$label" "no-workflow SKIP missing · $(grep gate-workflow <<< "$out")"; return; }
+  out=$(run_gate "$dest" pr --no-docker --only gate-workflow --profile mvp-client) || { fail "$label" "exit $?"; return; }
+  # Why the JSON: the summary line is cut at 55 characters, so the command it names lives in the report.
+  grep -qE '^WARN[[:space:]]+gate-workflow' <<< "$out" || { fail "$label" "client WARN missing · $(grep gate-workflow <<< "$out")"; return; }
+  grep -q 'update --ci' "$dest/qa-report/gate-pr-latest.json" || { fail "$label" "the WARN does not name the command"; return; }
+  # update --ci writes it, pinned to the installed gate.
+  run_gate "$dest" update --ci | grep -q 'wrote   .github/workflows/qa-gate.yml' || { fail "$label" "update --ci did not write the workflow"; return; }
+  out=$(run_gate "$dest" pr --no-docker --only gate-workflow) || { fail "$label" "exit $?"; return; }
+  grep -qE '^PASS[[:space:]]+gate-workflow' <<< "$out" || { fail "$label" "fresh workflow not PASS · $(grep gate-workflow <<< "$out")"; return; }
+  # A stale pin is visible, and update fixes it.
+  sed -i 's#uses: limbpuma/qa-gate@[0-9a-f]\{40\}#uses: limbpuma/qa-gate@0000000000000000000000000000000000000000#g' "$dest/.github/workflows/qa-gate.yml"
+  out=$(run_gate "$dest" pr --no-docker --only gate-workflow) || { fail "$label" "exit $?"; return; }
+  grep -qE '^WARN[[:space:]]+gate-workflow[[:space:]]+workflow pins 0000000' <<< "$out" || { fail "$label" "stale pin not reported · $(grep gate-workflow <<< "$out")"; return; }
+  run_gate "$dest" update | grep -q 'refreshed .github/workflows/qa-gate.yml' || { fail "$label" "update did not refresh the workflow"; return; }
+  out=$(run_gate "$dest" pr --no-docker --only gate-workflow) || { fail "$label" "exit $?"; return; }
+  grep -qE '^PASS[[:space:]]+gate-workflow' <<< "$out" || { fail "$label" "refreshed workflow not PASS"; return; }
+  # A DoD block written before the closing marker existed is replaced; the repo's own text above it survives.
+  printf '# Agents\n\nproject notes\n\n<!-- qa-gate:dod -->\n## Quality Gate (qa-gate)\n\nold text\n1. `bash scripts/qa-gate.sh pre-commit` before each commit.\n' > "$dest/AGENTS.md"
+  run_gate "$dest" update | grep -q 'refreshed AGENTS.md' || { fail "$label" "old DoD block not refreshed"; return; }
+  grep -q 'project notes' "$dest/AGENTS.md" || { fail "$label" "update ate the repo's own text"; return; }
+  grep -q 'gate-workflow' "$dest/AGENTS.md" || { fail "$label" "refreshed block lacks the new instruction"; return; }
+  grep -q '/qa-gate:dod' "$dest/AGENTS.md" || { fail "$label" "closing marker missing"; return; }
+  # Someone else's text under the marker is never touched.
+  printf '<!-- qa-gate:dod -->\nmy own notes, not the gate block\n' > "$dest/CLAUDE.md"
+  run_gate "$dest" update | grep -q 'not ours' || { fail "$label" "foreign block not reported"; return; }
+  grep -q 'my own notes' "$dest/CLAUDE.md" || { fail "$label" "foreign block was overwritten"; return; }
+  pass "$label"
+}
+
+test_build_stage_docker() {
+  local label="T29.build" dest out
+  if ! docker info >/dev/null 2>&1; then printf 'skip  %s — docker not available\n' "$label"; return; fi
+  dest=$(prep_fixture_repo node)
+  out=$(run_gate "$dest" build) || { fail "$label" "build exit $? · $(grep -E 'docker-build|trivy-image|sbom' <<< "$out")"; return; }
+  grep -qE '^PASS[[:space:]]+docker-build' <<< "$out" || { fail "$label" "docker-build not PASS · $(grep docker-build <<< "$out")"; return; }
+  grep -qE '^PASS[[:space:]]+trivy-image[[:space:]]+0 high/critical' <<< "$out" || { fail "$label" "trivy-image not PASS · $(grep trivy-image <<< "$out")"; return; }
+  grep -qE '^PASS[[:space:]]+sbom' <<< "$out" || { fail "$label" "sbom not PASS · $(grep sbom <<< "$out")"; return; }
+  [[ -s "$dest/qa-report/trivy-image.json" ]] || { fail "$label" "no trivy-image report"; return; }
+  node -e 'const j=require(process.argv[1]); if (!j.bomFormat && !j.components) process.exit(1)' "$dest/qa-report/sbom.cdx.json" || { fail "$label" "sbom is not CycloneDX"; return; }
+  pass "$label"
+}
+
+test_e2e_and_nuclei() {
+  local label="T30.e2e-nuclei" dest out
+  dest=$(prep_fixture_repo web)
+  # e2e: the command runs with the base URL exported, and a failing suite blocks.
+  cfg_set "$dest/qa-gate.config.json" 'j.commands = { node: { e2e: "node -e \"process.exit(process.env.E2E_BASE_URL ? 0 : 1)\"" } }'
+  out=$(run_gate "$dest" staging --only e2e) || { fail "$label" "e2e exit $? · $(grep e2e <<< "$out")"; return; }
+  grep -qE '^PASS[[:space:]]+e2e[[:space:]]+e2e suite passed against http' <<< "$out" || { fail "$label" "e2e not PASS · $(grep e2e <<< "$out")"; return; }
+  cfg_set "$dest/qa-gate.config.json" 'j.commands.node.e2e = "node -e \"process.exit(1)\""'
+  out=$(run_gate "$dest" staging --only e2e) && { fail "$label" "a failing e2e suite did not block"; return; }
+  grep -qE '^FAIL[[:space:]]+e2e' <<< "$out" || { fail "$label" "no FAIL e2e line · $(grep e2e <<< "$out")"; return; }
+  cfg_set "$dest/qa-gate.config.json" 'delete j.commands'
+  out=$(run_gate "$dest" staging --only e2e) || { fail "$label" "exit $?"; return; }
+  grep -qE '^SKIP[[:space:]]+e2e[[:space:]]+no e2e command' <<< "$out" || { fail "$label" "e2e SKIP reason wrong · $(grep e2e <<< "$out")"; return; }
+  # nuclei: disabled by config is a SKIP with the reason; the scan itself only runs when the image is already local
+  # (never pull 200 MB in a test), and then an unreachable target must not read as a clean site.
+  cfg_set "$dest/qa-gate.config.json" 'j.web.nuclei = { enabled: false }'
+  # Why production: the mvp-client profile skips nuclei by cost, which would mask the reason under test.
+  out=$(run_gate "$dest" staging --only nuclei --profile production) || { fail "$label" "exit $?"; return; }
+  grep -qE '^SKIP[[:space:]]+nuclei[[:space:]]+web\.nuclei\.enabled=false' <<< "$out" || { fail "$label" "nuclei SKIP reason wrong · $(grep nuclei <<< "$out")"; return; }
+  local image
+  image=$(node -e 'process.stdout.write(JSON.parse(require("fs").readFileSync(process.argv[1],"utf8")).web?.nuclei?.image || "")' "$QA_GATE_HOME/templates/qa-gate.config.json")
+  if docker image inspect "$image" >/dev/null 2>&1; then
+    cfg_set "$dest/qa-gate.config.json" 'j.web.nuclei = { enabled: true }'
+    out=$(run_gate "$dest" staging --only nuclei --profile production) || true
+    grep -qE '^(PASS|FAIL)[[:space:]]+nuclei' <<< "$out" || { fail "$label" "nuclei produced no verdict · $(grep nuclei <<< "$out")"; return; }
+    grep -q '"exit"' "$dest/qa-report/gate-staging-latest.json" || { fail "$label" "nuclei verdict does not record whether it ran"; return; }
+  fi
+  pass "$label"
+}
+
+test_ai_eval() {
+  local label="T31.ai-eval" dest out ev
+  dest=$(prep_fixture_repo node)
+  cfg_set "$dest/package.json" 'j.dependencies = { openai: "^4.0.0" }'
+  run_gate "$dest" init >/dev/null || { fail "$label" "init failed"; return; }
+  grep -q '!qa-report/ai-eval-latest.json' "$dest/.gitignore" || { fail "$label" ".gitignore lacks the evidence exception"; return; }
+  ev="$dest/qa-report/ai-eval-latest.json"
+  mkdir -p "$dest/src" "$dest/qa-report"
+  printf 'export const PROMPT = "extract the order";\n' > "$dest/src/prompt.ts"
+  (cd "$dest" && git_quiet add -A && git_commit_quiet -m "prompt")
+
+  # No evidence: a prototype is told, a client is warned, production blocks.
+  out=$(run_gate "$dest" pr --no-docker --only ai-eval-safety) || { fail "$label" "missing evidence must not block a demo"; return; }
+  grep -qE '^SKIP[[:space:]]+ai-eval-safety[[:space:]]+no AI evidence' <<< "$out" || { fail "$label" "demo SKIP missing · $(grep ai-eval <<< "$out")"; return; }
+  out=$(run_gate "$dest" pr --no-docker --only ai-eval-safety --profile mvp-client) || { fail "$label" "client run exited $?"; return; }
+  grep -qE '^WARN[[:space:]]+ai-eval-safety' <<< "$out" || { fail "$label" "client WARN missing · $(grep ai-eval <<< "$out")"; return; }
+  out=$(run_gate "$dest" pr --no-docker --only ai-eval-safety --profile production) && { fail "$label" "production without evidence did not FAIL"; return; }
+
+  # Evidence, everything passing: all three green and the ratchet remembers the ids.
+  write_ai_eval "$ev" "$(date +%Y-%m-%dT%H:%M:%S%z)" \
+    '{"id":"allergy-gluten","category":"safety","status":"pass"},{"id":"injection-ignore","category":"security","status":"pass"},{"id":"pizza-with-tomato","category":"quality","status":"pass"},{"id":"something-spicy","category":"quality","status":"pass"}'
+  out=$(run_gate "$dest" pr --no-docker --only ai-eval-safety,ai-eval-quality,ai-eval-fresh) || { fail "$label" "clean evidence not green · $(grep ai-eval <<< "$out")"; return; }
+  grep -qE '^PASS[[:space:]]+ai-eval-safety[[:space:]]+1 safety \+ 1 security' <<< "$out" || { fail "$label" "safety line wrong · $(grep ai-eval-safety <<< "$out")"; return; }
+  grep -qE '^PASS[[:space:]]+ai-eval-quality[[:space:]]+quality 100%' <<< "$out" || { fail "$label" "quality line wrong · $(grep ai-eval-quality <<< "$out")"; return; }
+  grep -qE '^PASS[[:space:]]+ai-eval-fresh' <<< "$out" || { fail "$label" "fresh not PASS · $(grep fresh <<< "$out")"; return; }
+  grep -q 'pizza-with-tomato' "$dest/qa-report/ai-eval-ratchet.json" || { fail "$label" "ratchet did not record the passing ids"; return; }
+
+  # A failing safety case blocks, and no waiver can wave it through.
+  write_ai_eval "$ev" "$(date +%Y-%m-%dT%H:%M:%S%z)" \
+    '{"id":"allergy-gluten","category":"safety","status":"fail","detail":"lowercase Gluten dropped"},{"id":"injection-ignore","category":"security","status":"pass"},{"id":"pizza-with-tomato","category":"quality","status":"pass"},{"id":"something-spicy","category":"quality","status":"pass"}'
+  cfg_set "$dest/qa-gate.config.json" 'j.waivers = [{ check: "ai-eval-safety", until: "2099-01-01", reason: "later", by: "tests" }]'
+  out=$(run_gate "$dest" pr --no-docker --only ai-eval-safety) && { fail "$label" "a failing safety case did not block"; return; }
+  grep -qE '^FAIL[[:space:]]+ai-eval-safety[[:space:]]+ai-eval-safety cannot be waived' <<< "$out" || { fail "$label" "safety was waivable · $(grep ai-eval-safety <<< "$out")"; return; }
+  grep -q '"ai-eval.allergy-gluten"' "$dest/qa-report/gate-pr.sarif" || { fail "$label" "the failing case is not in the SARIF"; return; }
+  cfg_set "$dest/qa-gate.config.json" 'j.waivers = []'
+
+  # A quality case that used to pass and now fails is a regression, even though the percentage is still high.
+  write_ai_eval "$ev" "$(date +%Y-%m-%dT%H:%M:%S%z)" \
+    '{"id":"allergy-gluten","category":"safety","status":"pass"},{"id":"injection-ignore","category":"security","status":"pass"},{"id":"pizza-with-tomato","category":"quality","status":"fail","detail":"exclude instead of include"},{"id":"something-spicy","category":"quality","status":"pass"},{"id":"cola","category":"quality","status":"pass"},{"id":"drinks","category":"quality","status":"pass"}'
+  out=$(run_gate "$dest" pr --no-docker --only ai-eval-quality) && { fail "$label" "a regression did not block"; return; }
+  grep -qE '^FAIL[[:space:]]+ai-eval-quality[[:space:]]+case\(s\) that used to pass now fail: pizza-with-tomato' <<< "$out" || { fail "$label" "regression not named · $(grep ai-eval-quality <<< "$out")"; return; }
+
+  # A brand-new case that does not pass yet is honest work in progress, not a regression.
+  write_ai_eval "$ev" "$(date +%Y-%m-%dT%H:%M:%S%z)" \
+    '{"id":"allergy-gluten","category":"safety","status":"pass"},{"id":"injection-ignore","category":"security","status":"pass"},{"id":"pizza-with-tomato","category":"quality","status":"pass"},{"id":"something-spicy","category":"quality","status":"pass"},{"id":"brand-new","category":"quality","status":"fail","detail":"not implemented"}'
+  out=$(run_gate "$dest" pr --no-docker --only ai-eval-quality) || { fail "$label" "a new failing case must not block"; return; }
+  grep -qE '^WARN[[:space:]]+ai-eval-quality.*brand-new' <<< "$out" || { fail "$label" "new case not reported as WARN · $(grep ai-eval-quality <<< "$out")"; return; }
+
+  # Deleting a case that used to pass is the other way to make a set look good; it is reported, not silently accepted.
+  write_ai_eval "$ev" "$(date +%Y-%m-%dT%H:%M:%S%z)" \
+    '{"id":"allergy-gluten","category":"safety","status":"pass"},{"id":"injection-ignore","category":"security","status":"pass"},{"id":"something-spicy","category":"quality","status":"pass"}'
+  out=$(run_gate "$dest" pr --no-docker --only ai-eval-quality) || { fail "$label" "a dropped case must not block"; return; }
+  grep -qE '^WARN[[:space:]]+ai-eval-quality' <<< "$out" || { fail "$label" "dropped case not reported · $(grep ai-eval-quality <<< "$out")"; return; }
+  # Why the JSON: the summary line is cut at 55 characters, so the ids live in the report.
+  grep -q 'gone from the set: pizza-with-tomato' "$dest/qa-report/gate-pr-latest.json" || { fail "$label" "the dropped id is not named in the report"; return; }
+
+  # Evidence older than the prompt it measured: stale.
+  write_ai_eval "$ev" "2020-01-01T00:00:00+0100" \
+    '{"id":"allergy-gluten","category":"safety","status":"pass"},{"id":"injection-ignore","category":"security","status":"pass"},{"id":"pizza-with-tomato","category":"quality","status":"pass"}'
+  printf 'export const PROMPT = "extract the order, carefully";\n' > "$dest/src/prompt.ts"
+  (cd "$dest" && git_quiet add -A && git_commit_quiet -m "tune the prompt")
+  out=$(run_gate "$dest" pr --no-docker --only ai-eval-fresh --profile mvp-client) && { fail "$label" "stale evidence did not block a client project"; return; }
+  grep -qE '^FAIL[[:space:]]+ai-eval-fresh[[:space:]]+src/prompt\.ts changed' <<< "$out" || { fail "$label" "stale message wrong · $(grep fresh <<< "$out")"; return; }
+  out=$(run_gate "$dest" pr --no-docker --only ai-eval-fresh) || { fail "$label" "stale must only WARN on a demo"; return; }
+  grep -qE '^WARN[[:space:]]+ai-eval-fresh' <<< "$out" || { fail "$label" "demo stale not WARN · $(grep fresh <<< "$out")"; return; }
+  pass "$label"
+}
+
 # --- Runner ----------------------------------------------------------------
 ensure_node_fixture_deps
 for fixture in node go python; do test_pre_commit_passes "$fixture"; done
@@ -614,6 +768,10 @@ test_history_trend
 test_spec_check
 test_shadow_pass
 test_deploy_stage
+test_ai_eval
+test_build_stage_docker
+test_e2e_and_nuclei
+test_integration_update
 test_ui_server
 test_ui_autostart
 if node "$SCRIPT_DIR/../scripts/validate-packs.mjs" >/dev/null 2>&1; then pass "T15.packs-valid"; else fail "T15.packs-valid" "$(node "$SCRIPT_DIR/../scripts/validate-packs.mjs" 2>&1 | grep -A3 FAIL | head -6)"; fi

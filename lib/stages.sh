@@ -109,7 +109,11 @@ stage_pr() {
   run_single_check semgrep true semgrep_check
   run_single_check trivy-fs true trivy_fs_check
   run_single_check ai-register true ai_register_check
+  run_single_check ai-eval-safety true ai_eval_safety_check
+  run_single_check ai-eval-quality true ai_eval_quality_check
+  run_single_check ai-eval-fresh true ai_eval_fresh_check
   run_single_check spec false spec_check
+  run_single_check gate-workflow false gate_workflow_check
   run_single_check gate-config true gate_config_check
 }
 
@@ -155,7 +159,7 @@ stage_build() {
   fi
   local sha tag
   sha=$(cd "$REPO_PATH" && git rev-parse --short HEAD 2>/dev/null || echo "latest")
-  tag="qa-gate/$(basename "$REPO_PATH"):$sha"
+  tag="qa-gate/$(docker_safe_name "$(basename "$REPO_PATH")"):$sha"
   run_single_check docker-build true docker_build_check "$dockerfile" "$tag"
   run_single_check trivy-image true trivy_image_check "$tag"
   run_single_check sbom false trivy_sbom_check "$tag"

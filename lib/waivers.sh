@@ -5,6 +5,9 @@
 # guarded by gate-config, so a waiver added on a branch is a config change the reviewer sees.
 # Sourced by qa-gate.sh.
 
+# A risk to a person is not a risk anyone gets to accept with a date: these checks ignore waivers entirely.
+readonly WAIVER_FORBIDDEN_CHECKS="ai-eval-safety"
+
 WAIVERS_ACTIVE_JSON="[]"
 WAIVERS_REJECTED_JSON="[]"
 
@@ -36,6 +39,11 @@ waiver_rejection_for() {
 apply_waiver() {
   local id="$1"
   [[ "$R_STATUS" == "$STATUS_FAIL" ]] || return 0
+  if [[ " $WAIVER_FORBIDDEN_CHECKS " == *" $id "* ]] && [[ -n "$(waiver_for "$id")" ]]; then
+    R_SUMMARY="$id cannot be waived · $R_SUMMARY"
+    log_warn "waiver for $id ignored: this check is not waivable"
+    return 0
+  fi
   local waiver rejection
   waiver=$(waiver_for "$id")
   if [[ -n "$waiver" ]]; then

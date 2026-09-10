@@ -31,6 +31,13 @@
 - Auftragsverarbeitungsvertrag / Standardvertragsklauseln mit dem Anbieter: [TODO — Datum, Ablage]
 - Datenminimierung (welche Personendaten das Modell sieht): [TODO]
 
+## Genauigkeit und Robustheit
+- Eigene Messung des Verhaltens (Testfälle mit Kategorie safety/security/quality): [TODO — Datei, Runner, Stand]
+  (Gate-Checks `ai-eval-safety`, `ai-eval-quality`, `ai-eval-fresh`; Evidenz in `qa-report/ai-eval-latest.json`,
+  zusammengefasst im Evidence-Bundle `qa-report/compliance-<Datum>.md`)
+- Modell fest gepinnt (datierter Snapshot statt gleitender Kennung): [TODO]
+- Was passiert, wenn das Modell falsch antwortet (Fallback, menschliche Prüfung): [TODO]
+
 ## Logging
 - Protokollierung der KI-Interaktionen (was, wie lange, wo): [TODO]
 - Prüfung der Ausgaben durch Menschen (Stichprobe, Beschwerdeweg): [TODO]

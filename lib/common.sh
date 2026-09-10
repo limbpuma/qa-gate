@@ -59,6 +59,13 @@ repo_hooks_dir() {
   case "$d" in /*|[A-Za-z]:*) printf '%s' "$d" ;; *) printf '%s/%s' "$REPO_PATH" "$d" ;; esac
 }
 
+# A Docker reference name: lowercase, only [a-z0-9._-], no leading or trailing separator.
+docker_safe_name() {
+  local name
+  name=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9._-]/-/g; s/^[-._]*//; s/[-._]*$//')
+  printf '%s' "${name:-repo}"
+}
+
 git_toplevel() {
   local dir="${1:-$PWD}"
   (cd "$dir" && git rev-parse --show-toplevel 2>/dev/null) || true

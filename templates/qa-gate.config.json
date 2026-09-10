@@ -178,6 +178,14 @@
   "audit": {
     "level": "high"
   },
+  "ai": {
+    "promptGlobs": [
+      "**/prompt*.{ts,tsx,js,mjs,py,md}",
+      "**/prompts/**"
+    ],
+    "evalFile": "qa-report/ai-eval-latest.json",
+    "ratchetFile": "qa-report/ai-eval-ratchet.json"
+  },
   "build": {
     "dockerfile": "auto",
     "context": ".",

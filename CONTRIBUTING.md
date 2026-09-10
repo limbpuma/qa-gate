@@ -44,6 +44,24 @@ Use the issue templates "Rule is wrong" or "Law changed". Quote the statute or d
 rule reports today and what it should report. A rule that a court or authority contradicts is fixed before
 anything else.
 
+## How this repository is published
+
+`limbpuma/qa-gate` is a **git subtree** of the maintainer's `claude-stack` repository, where the gate lives at
+`~/.claude/scripts/qa-gate` and is developed. A release is:
+
+```bash
+cd ~/.claude
+git add scripts/qa-gate && git commit -m "feat(qa-gate): …"
+git subtree split --prefix=scripts/qa-gate -b qa-gate-split
+git push qa-gate qa-gate-split:main                 # remote "qa-gate" = this repository
+git tag -a v0.x.0 qa-gate-split -m "qa-gate v0.x.0" && git push qa-gate v0.x.0
+git branch -D qa-gate-split
+```
+
+Tags therefore point at the commits produced by the split, not at commits of `claude-stack`. After tagging, the
+release commit's SHA goes into `templates/ci.yml` (`uses: limbpuma/qa-gate@<sha> # v0.x.0`) and into the README, and
+that is what `qa-gate.sh update` then propagates into every repo that uses the gate.
+
 ## Pull requests
 
 The PR template asks for: the source, the fixture pair, the self-test line, and whether the change touches a

@@ -17,14 +17,18 @@ nuclei_check() {
   host=$(docker_host_path "$REPO_PATH")
   ensure_dir "$REPO_PATH/qa-report"
   rm -f "$REPO_PATH/$NUCLEI_REPORT"
+  local rc=0
   # shellcheck disable=SC2086
   docker_run run --rm --add-host="$DOCKER_HOST_ALIAS:host-gateway" \
     -v "$NUCLEI_TEMPLATES_VOLUME:/root/nuclei-templates" -v "$NUCLEI_CONFIG_VOLUME:/root/.config/nuclei" -v "${host}:/src" \
-    "$image" -u "$target" $templates -severity "$severity" -jsonl -o "/src/$NUCLEI_REPORT" -silent -nc >>"$LOG_FILE" 2>&1 || true
+    "$image" -u "$target" $templates -severity "$severity" -jsonl -o "/src/$NUCLEI_REPORT" -silent -nc >>"$LOG_FILE" 2>&1 || rc=$?
   local findings=0
   [[ -f "$REPO_PATH/$NUCLEI_REPORT" ]] && findings=$(grep -c . "$REPO_PATH/$NUCLEI_REPORT" || true)
   R_REPORT="$NUCLEI_REPORT"
-  R_COUNT_JSON="{\"findings\":$findings}"
-  if (( findings > 0 )); then mark_fail "$findings finding(s) ≥ $severity → $NUCLEI_REPORT"
-  else mark_pass "0 findings ≥ $severity"; fi
+  R_COUNT_JSON="{\"findings\":$findings,\"exit\":$rc}"
+  if (( findings > 0 )); then mark_fail "$findings finding(s) ≥ $severity → $NUCLEI_REPORT"; return 0; fi
+  # Why: a container that cannot reach the target writes nothing, which used to be indistinguishable from a clean
+  # site — a silent PASS on the one stage that runs against a real deployment.
+  if (( rc != 0 )); then mark_fail "nuclei did not complete (exit $rc) — see log"; return 0; fi
+  mark_pass "0 findings ≥ $severity"
 }

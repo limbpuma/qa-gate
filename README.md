@@ -127,6 +127,15 @@ the four AI Act checks.
 - Each repo pins the gate version it expects (`gateVersion`); an older installed gate is FAIL on client profiles.
 - AI is used only to propose: a config suggestion, a rule draft, a triage. Verdicts are never generated.
 
+### When the project itself uses AI
+
+The gate never runs your model, never judges it with another model and never spends a token. It reads the evidence
+you produce — `qa-report/ai-eval-latest.json` ([schema](schemas/ai-eval.schema.json)), written by whatever runner you
+like: vitest, promptfoo, a script. **Cases, not percentages**: every case has an id, so the gate can enforce the one
+rule an average hides — a case that used to pass may not start failing. `safety` and `security` cases must all pass
+and cannot be waived; `quality` cases may not regress; evidence older than the prompt it measured is stale and
+blocks. Without an AI SDK in the repo, all of it is SKIP.
+
 ## Read more
 
 - [docs/REFERENCE.md](docs/REFERENCE.md) — CLI, every check, JSON and SARIF shape, configuration keys, waivers,

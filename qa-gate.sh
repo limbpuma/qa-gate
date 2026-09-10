@@ -10,7 +10,7 @@ readonly QA_GATE_HOME
 readonly LIB_DIR="$QA_GATE_HOME/lib"
 readonly TPL_DIR="$QA_GATE_HOME/templates"
 
-for lib in common detect secrets audit config-guard waivers version semgrep trivy stack-node stack-go stack-python ai-register spec deploy summary init suggest ui; do
+for lib in common detect secrets audit config-guard waivers version semgrep trivy stack-node stack-go stack-python ai-register ai-eval spec deploy summary init suggest ui; do
   # shellcheck disable=SC1090
   source "$LIB_DIR/$lib.sh"
 done
@@ -30,7 +30,10 @@ qa-gate.sh — global quality gate
 Usage:
   qa-gate.sh <stage> [options]
   qa-gate.sh init [--web] [--repo <path>]
-  qa-gate.sh update [--repo <path>]      pin the installed gate version in qa-gate.config.json (gateVersion)
+  qa-gate.sh update [--ci] [--repo <path>]
+                                         bring this repo up to date with the installed gate: pin gateVersion, refresh
+                                         the CI workflow and the AGENTS.md/CLAUDE.md DoD block; --ci also creates the
+                                         workflow when the repo has none
   qa-gate.sh trend [n] [--repo <path>]   last n runs from qa-report/history.jsonl (verdict, coverage, Lighthouse, fails)
   qa-gate.sh ui [--port 4600] [--all] [--open] [--strict-port] [--idle <min>] [--stop]
                                          local page over qa-report/: runs, checks, findings, legal table, live view,
@@ -70,6 +73,7 @@ BASE_URL_OVERRIDE=""
 PATHS_OVERRIDE=""
 PROFILE_OVERRIDE=""
 TREND_ROWS=""
+UPDATE_CI=0
 INIT_WEB=""
 JSON_ONLY=0
 
@@ -79,6 +83,7 @@ parse_args() {
       init|update|suggest|ui|pre-commit|pr|build|staging|compliance|deploy|all) STAGE="$1"; shift ;;
       --port)                UI_PORT="${2:?--port needs a number}"; shift 2 ;;
       --strict-port)         UI_STRICT=1; shift ;;
+      --ci)                  UPDATE_CI=1; shift ;;
       --all)                 UI_ALL=1; shift ;;
       --open)                UI_OPEN=1; shift ;;
       --idle)                UI_IDLE="${2:?--idle needs minutes}"; shift 2 ;;
@@ -142,7 +147,7 @@ main() {
     exit $?
   fi
   if [[ "$STAGE" == "update" ]]; then
-    update_pin
+    update_repo
     exit $?
   fi
   if [[ "$STAGE" == "trend" ]]; then

@@ -533,6 +533,27 @@
           "minimum": 1
         }
       }
+    },
+    "ai": {
+      "type": "object",
+      "description": "How this repo's own AI code is checked. Distinct from legal.ai, which is what the website tells its visitors (KI-VO Art. 50).",
+      "properties": {
+        "promptGlobs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Git pathspec globs for the prompt files; evidence older than the newest commit touching them is stale."
+        },
+        "evalFile": {
+          "type": "string",
+          "description": "The evidence the project produces (schemas/ai-eval.schema.json)."
+        },
+        "ratchetFile": {
+          "type": "string",
+          "description": "Commit it: it holds the case ids that passed, so a regression is provable."
+        }
+      }
     }
   },
   "definitions": {
